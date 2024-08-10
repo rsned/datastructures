@@ -2,39 +2,46 @@ package tree
 
 import "golang.org/x/exp/constraints"
 
-// BSTNode is the basic node in a binary search tree.
-type BSTNode[T constraints.Ordered] struct {
+// bstNode is the basic node in a binary search tree.
+type bstNode[T constraints.Ordered] struct {
 	value       T
-	left, right *BSTNode[T]
+	left, right *bstNode[T]
 }
 
-func (t *BSTNode[T]) HasLeft() bool {
+// HasLeft reports if this node has a Left child.
+func (t *bstNode[T]) HasLeft() bool {
 	return t.left != nil
 }
 
-func (t *BSTNode[T]) HasRight() bool {
+// HasRight reports if this node has a Right child.
+func (t *bstNode[T]) HasRight() bool {
 	return t.right != nil
 }
 
-func (t *BSTNode[T]) Left() BinaryTree[T] {
+// Left returns this nodes Left child.
+func (t *bstNode[T]) Left() BinaryTree[T] {
 	return t.left
 }
 
-func (t *BSTNode[T]) Right() BinaryTree[T] {
+// Right returns this nodes Right child.
+func (t *bstNode[T]) Right() BinaryTree[T] {
 	return t.right
 }
 
-func (t *BSTNode[T]) Value() T {
+// Value returns this nodes Value.
+func (t *bstNode[T]) Value() T {
 	return t.value
 }
 
-func (t *BSTNode[T]) Metadata() string {
+// Metadata returns a string of metadata about this node.
+// Plain binary search trees have nothing interesting to show.
+func (t *bstNode[T]) Metadata() string {
 	return ""
 }
 
 // Insert inserts the value into the tree, growing as needed, and reports
 // if the operation was successful.
-func (t *BSTNode[T]) Insert(v T) bool {
+func (t *bstNode[T]) Insert(v T) bool {
 	if t == nil {
 		return false
 	}
@@ -46,14 +53,14 @@ func (t *BSTNode[T]) Insert(v T) bool {
 
 	if v < t.value {
 		if t.left == nil {
-			t.left = &BSTNode[T]{value: v}
+			t.left = &bstNode[T]{value: v}
 			return true
 		}
 		return t.left.Insert(v)
 	}
 
 	if t.right == nil {
-		t.right = &BSTNode[T]{value: v}
+		t.right = &bstNode[T]{value: v}
 		return true
 	}
 	return t.right.Insert(v)
@@ -62,7 +69,7 @@ func (t *BSTNode[T]) Insert(v T) bool {
 // Delete the requested node from the tree and reports if it was successful.
 // If the value is not in the tree, the tree is unchanged and false is returned.
 // If the node is not a leaf the trees internal structure may be updated.
-func (t *BSTNode[T]) Delete(v T) bool {
+func (t *bstNode[T]) Delete(v T) bool {
 	if t == nil {
 		return false
 	}
@@ -70,7 +77,7 @@ func (t *BSTNode[T]) Delete(v T) bool {
 }
 
 // Search reports if the given value is in the tree.
-func (t *BSTNode[T]) Search(v T) bool {
+func (t *bstNode[T]) Search(v T) bool {
 	if t == nil {
 		return false
 	}
@@ -86,7 +93,7 @@ func (t *BSTNode[T]) Search(v T) bool {
 
 // Walk traverse the tree in the specified order emitting the values to
 // the channel. Channel is closed once the final value is emitted.
-func (t *BSTNode[T]) Traverse(tOrder TraverseOrder) <-chan T {
+func (t *bstNode[T]) Traverse(tOrder TraverseOrder) <-chan T {
 	ch := make(chan T)
 	go func() {
 		traverseBinaryTree(t, tOrder, ch)
@@ -98,7 +105,7 @@ func (t *BSTNode[T]) Traverse(tOrder TraverseOrder) <-chan T {
 
 // Height returns the height of the longest path in the tree from the
 // root node to the farthest leaf.
-func (t *BSTNode[T]) Height() int {
+func (t *bstNode[T]) Height() int {
 	if t == nil {
 		return 0
 	}

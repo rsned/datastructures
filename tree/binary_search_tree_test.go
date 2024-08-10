@@ -23,7 +23,7 @@ func TestBSTInsert(t *testing.T) {
 		{
 			// Insert to left.
 			tree: &BST[int]{
-				root: &BSTNode[int]{
+				root: &bstNode[int]{
 					value: 42,
 				},
 			},
@@ -33,7 +33,7 @@ func TestBSTInsert(t *testing.T) {
 		{
 			// Insert to right.
 			tree: &BST[int]{
-				root: &BSTNode[int]{
+				root: &bstNode[int]{
 					value: 42,
 				},
 			},
@@ -43,7 +43,7 @@ func TestBSTInsert(t *testing.T) {
 		{
 			// Attempt to insert a duplicate value.
 			tree: &BST[int]{
-				root: &BSTNode[int]{
+				root: &bstNode[int]{
 					value: 42,
 				},
 			},
@@ -80,7 +80,7 @@ func TestBSTDelete(t *testing.T) {
 			TODO(rsned): Once Delete is implemented, add this case.
 			{
 				tree: &BST[int]{
-					root: &BSTNode[int]{
+					root: &bstNode[int]{
 						value: 42,
 					},
 				}
@@ -110,7 +110,7 @@ func TestBSTSearch(t *testing.T) {
 		},
 		{
 			tree: &BST[int]{
-				root: &BSTNode[int]{
+				root: &bstNode[int]{
 					value: 42,
 				},
 			},
@@ -119,23 +119,23 @@ func TestBSTSearch(t *testing.T) {
 		},
 		{
 			tree: &BST[int]{
-				root: &BSTNode[int]{
+				root: &bstNode[int]{
 					value: 42,
-					left: &BSTNode[int]{
+					left: &bstNode[int]{
 						value: 21,
-						left: &BSTNode[int]{
+						left: &bstNode[int]{
 							value: 1,
 						},
-						right: &BSTNode[int]{
+						right: &bstNode[int]{
 							value: 30,
-							left: &BSTNode[int]{
+							left: &bstNode[int]{
 								value: 29,
 							},
 						},
 					},
-					right: &BSTNode[int]{
+					right: &bstNode[int]{
 						value: 84,
-						left: &BSTNode[int]{
+						left: &bstNode[int]{
 							value: 57,
 						},
 					},
@@ -165,7 +165,7 @@ func TestBSTHeight(t *testing.T) {
 		},
 		{
 			tree: &BST[int]{
-				root: &BSTNode[int]{
+				root: &bstNode[int]{
 					value: 42,
 				},
 			},
@@ -173,23 +173,23 @@ func TestBSTHeight(t *testing.T) {
 		},
 		{
 			tree: &BST[int]{
-				root: &BSTNode[int]{
+				root: &bstNode[int]{
 					value: 42,
-					left: &BSTNode[int]{
+					left: &bstNode[int]{
 						value: 21,
-						left: &BSTNode[int]{
+						left: &bstNode[int]{
 							value: 1,
 						},
-						right: &BSTNode[int]{
+						right: &bstNode[int]{
 							value: 30,
-							left: &BSTNode[int]{
+							left: &bstNode[int]{
 								value: 29,
 							},
 						},
 					},
-					right: &BSTNode[int]{
+					right: &bstNode[int]{
 						value: 84,
-						left: &BSTNode[int]{
+						left: &bstNode[int]{
 							value: 57,
 						},
 					},
@@ -208,23 +208,23 @@ func TestBSTHeight(t *testing.T) {
 
 func TestBSTTraverse(t *testing.T) {
 	tree := &BST[int]{
-		root: &BSTNode[int]{
+		root: &bstNode[int]{
 			value: 42,
-			left: &BSTNode[int]{
+			left: &bstNode[int]{
 				value: 21,
-				left: &BSTNode[int]{
+				left: &bstNode[int]{
 					value: 1,
 				},
-				right: &BSTNode[int]{
+				right: &bstNode[int]{
 					value: 30,
-					left: &BSTNode[int]{
+					left: &bstNode[int]{
 						value: 29,
 					},
 				},
 			},
-			right: &BSTNode[int]{
+			right: &bstNode[int]{
 				value: 84,
-				left: &BSTNode[int]{
+				left: &bstNode[int]{
 					value: 57,
 				},
 			},

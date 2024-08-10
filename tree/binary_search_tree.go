@@ -5,7 +5,7 @@ import "golang.org/x/exp/constraints"
 // BST is the simplest binary tree type. A node value and left and right
 // pointers. No balancing or shuffling.
 type BST[T constraints.Ordered] struct {
-	root *BSTNode[T]
+	root *bstNode[T]
 }
 
 // NewBST returns an empty BST tree ready to use.
@@ -22,7 +22,7 @@ func (t *BST[T]) Root() BinaryTree[T] {
 // if the operation was successful.
 func (t *BST[T]) Insert(v T) bool {
 	if t.root == nil {
-		t.root = &BSTNode[T]{
+		t.root = &bstNode[T]{
 			value: v,
 		}
 		return true
