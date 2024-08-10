@@ -104,18 +104,16 @@ func BenchmarkTreeInsert(b *testing.B) {
 			name: "BST",
 			tree: newBSTTree[int],
 		},
-		/*
-			{
-				name: "AVL",
-				tree: newAVLTree[int],
-			},
-		*/
+		{
+			name: "AVL",
+			tree: newAVLTree[int],
+		},
 	}
 
 	for _, example := range examples {
 		// Check if the user requested filtering on the benchmark.
 		if *treeTypeFilter != "" &&
-			strings.ToUpper(example.name) != strings.ToUpper(*treeTypeFilter) {
+			strings.EqualFold(example.name, *treeTypeFilter) {
 			continue
 		}
 
@@ -148,18 +146,16 @@ func BenchmarkTreeSearch(b *testing.B) {
 			name: "BST",
 			tree: newBSTTree[int],
 		},
-		/*
-			{
-				name: "AVL",
-				tree: newAVLTree[int],
-			},
-		*/
+		{
+			name: "AVL",
+			tree: newAVLTree[int],
+		},
 	}
 
 	for _, example := range examples {
 		// Check if the user requested filtering on the benchmark.
 		if *treeTypeFilter != "" &&
-			strings.ToUpper(example.name) != strings.ToUpper(*treeTypeFilter) {
+			strings.EqualFold(example.name, *treeTypeFilter) {
 			continue
 		}
 
