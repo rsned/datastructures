@@ -154,3 +154,12 @@ func Equivalent[T constraints.Ordered](a, b Tree[T], opts ...treeOptionFunc) boo
 
 	return false
 }
+
+// Summarize takes a tree and reports a set of basic facts about the tree.
+// Some data points include height of tree, optimality of tree balance,
+// tree size, etc.
+//
+// TODO(rsned): See about generating a struct with interesting fields.
+func Summarize[T constraints.Ordered](t Tree[T]) string {
+	return ""
+}
