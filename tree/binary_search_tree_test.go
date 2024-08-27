@@ -11,14 +11,20 @@ import (
 func TestBSTInsert(t *testing.T) {
 	// Tests are done with ints to prove the code does the right thing.
 	tests := []struct {
-		tree Tree[int]
-		val  int
-		want bool
+		tree          *BST[int]
+		val           int
+		want          bool
+		wantStructure *BST[int]
 	}{
 		{
 			tree: &BST[int]{},
 			val:  5,
 			want: true,
+			wantStructure: &BST[int]{
+				root: &bstNode[int]{
+					value: 5,
+				},
+			},
 		},
 		{
 			// Insert to left.
@@ -29,6 +35,14 @@ func TestBSTInsert(t *testing.T) {
 			},
 			val:  5,
 			want: true,
+			wantStructure: &BST[int]{
+				root: &bstNode[int]{
+					value: 42,
+					left: &bstNode[int]{
+						value: 5,
+					},
+				},
+			},
 		},
 		{
 			// Insert to right.
@@ -39,6 +53,14 @@ func TestBSTInsert(t *testing.T) {
 			},
 			val:  53,
 			want: true,
+			wantStructure: &BST[int]{
+				root: &bstNode[int]{
+					value: 42,
+					right: &bstNode[int]{
+						value: 53,
+					},
+				},
+			},
 		},
 		{
 			// Attempt to insert a duplicate value.
@@ -49,12 +71,21 @@ func TestBSTInsert(t *testing.T) {
 			},
 			val:  42,
 			want: false,
+			wantStructure: &BST[int]{
+				root: &bstNode[int]{
+					value: 42,
+				},
+			},
 		},
 	}
 
 	for _, test := range tests {
 		if got := test.tree.Insert(test.val); got != test.want {
 			t.Errorf("Insert(%v) = %v, want %v", test.val, got, test.want)
+		}
+
+		if !Equal(test.tree.Root(), test.wantStructure.Root()) {
+			t.Errorf("value was inserted but the resulting tree was not as expected.")
 		}
 	}
 }

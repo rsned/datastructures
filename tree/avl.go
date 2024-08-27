@@ -1,6 +1,8 @@
 package tree
 
 import (
+	"bytes"
+
 	"golang.org/x/exp/constraints"
 )
 
@@ -53,8 +55,14 @@ func (t *AVL[T]) Search(v T) bool {
 
 // Traverse traverse the tree in the specified order emitting the values to
 // the channel. Channel is closed once the final value is emitted.
-func (t *AVL[T]) Traverse(w TraverseOrder) <-chan T {
-	return make(chan T)
+func (t *AVL[T]) Traverse(tOrder TraverseOrder) <-chan T {
+	ch := make(chan T)
+	go func() {
+		traverseBinaryTree(t.root, tOrder, ch)
+		close(ch)
+	}()
+
+	return ch
 }
 
 // Height returns the height of the longest path in the tree from the
@@ -65,3 +73,23 @@ func (t *AVL[T]) Height() int {
 	}
 	return t.root.Height()
 }
+
+// toTestString prints out this tree with all its properties and children
+// ready to copy and paste into test code.
+// NOTE: This does not determine the exact type of T this instance is. It
+// simply prints the types as [T]. Updating is left to the consumer.
+func (t *AVL[T]) toTestString() string {
+
+	var buf bytes.Buffer
+	buf.WriteString("tree := &AVL[T]{\n")
+	buf.WriteString("\troot: &avlNode[T]{\n")
+
+	t.root.toTestString(&buf, 2)
+
+	buf.WriteString("\t},\n")
+	buf.WriteString("}\n")
+
+	return buf.String()
+}
+
+const testIndents = "\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t"

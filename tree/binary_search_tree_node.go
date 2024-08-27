@@ -4,17 +4,25 @@ import "golang.org/x/exp/constraints"
 
 // bstNode is the basic node in a binary search tree.
 type bstNode[T constraints.Ordered] struct {
-	value       T
+	value T
+
+	// The two children nodes.
 	left, right *bstNode[T]
 }
 
 // HasLeft reports if this node has a Left child.
 func (t *bstNode[T]) HasLeft() bool {
+	if t == nil {
+		return false
+	}
 	return t.left != nil
 }
 
 // HasRight reports if this node has a Right child.
 func (t *bstNode[T]) HasRight() bool {
+	if t == nil {
+		return false
+	}
 	return t.right != nil
 }
 
@@ -51,6 +59,8 @@ func (t *bstNode[T]) Insert(v T) bool {
 		return false
 	}
 
+	// If we need to go farther left, add a new node if needed,
+	// otherwise recurse!
 	if v < t.value {
 		if t.left == nil {
 			t.left = &bstNode[T]{value: v}
@@ -91,8 +101,11 @@ func (t *bstNode[T]) Search(v T) bool {
 	return t.right.Search(v)
 }
 
-// Walk traverse the tree in the specified order emitting the values to
+// Traverse traverses the tree in the specified order emitting the values to
 // the channel. Channel is closed once the final value is emitted.
+//
+// NOTE: Nodes in general are not expected to initiate the traverse. It would
+// normally be kicked off by the main container type, e.g., BST not bstNode.
 func (t *bstNode[T]) Traverse(tOrder TraverseOrder) <-chan T {
 	ch := make(chan T)
 	go func() {

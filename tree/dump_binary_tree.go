@@ -140,17 +140,20 @@ var (
 	}
 )
 
+// RenderMode is an enum for potential outputs when dumping or rendering the trees.
 type RenderMode int
 
+// Set of current render modes.
 const (
 	ModeASCII RenderMode = iota
 	ModeSVG
 )
 
+// RenderBinaryTree returns the given tree in the given mode rendered into string form.
 func RenderBinaryTree[T constraints.Ordered](t BinaryTree[T], height int, mode RenderMode) string {
 	switch mode {
 	case ModeASCII:
-		return dumpBinaryTree("", t, height)
+		return dumpBinaryTree("", t)
 	default:
 		return "Method not implemented yet"
 	}
@@ -164,12 +167,15 @@ func RenderBinaryTree[T constraints.Ordered](t BinaryTree[T], height int, mode R
 // e.g. -21, 123, 7, etc.
 //
 // An optional label is output before the tree contents.
-func dumpBinaryTree[T constraints.Ordered](label string, t BinaryTree[T], height int) string {
+func dumpBinaryTree[T constraints.Ordered](label string, t BinaryTree[T]) string {
 	var buf bytes.Buffer
-	if t == nil {
+	// This doesn't work on interface to generic types.
+	// If the tree is nil, it skips this and crashes later on.
+	if isTreeNil(t) {
 		return buf.String()
 	}
 
+	height := t.Height()
 	node := t
 	nodes := []BinaryTree[T]{node}
 	var nextNodes []BinaryTree[T]

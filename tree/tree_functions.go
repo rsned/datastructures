@@ -2,8 +2,8 @@ package tree
 
 import "golang.org/x/exp/constraints"
 
-// TreeOptions contains the various settings used in these tree functions.
-type TreeOptions struct {
+// Options contains the various settings used in these tree functions.
+type Options struct {
 	// ignoreDuplicates indicates of duplicate values
 	ignoreDuplicates bool
 
@@ -12,20 +12,20 @@ type TreeOptions struct {
 	fpTolerance float64
 }
 
-func defaultTreeOptions() *TreeOptions {
-	return &TreeOptions{
+func defaultOptions() *Options {
+	return &Options{
 		ignoreDuplicates: true,
 		fpTolerance:      1e-15,
 	}
 }
 
 // treeOptionFunc is a function to set options for use in variadic opt params.
-type treeOptionFunc func(c *TreeOptions)
+type treeOptionFunc func(c *Options)
 
 // IgnoreDuplicates tells the tree function that a duplicate value in an
 // operation should be ignored. (Such as when joining two Trees)
 func IgnoreDuplicates(ignore bool) treeOptionFunc {
-	return func(o *TreeOptions) {
+	return func(o *Options) {
 		o.ignoreDuplicates = ignore
 	}
 }
@@ -33,7 +33,7 @@ func IgnoreDuplicates(ignore bool) treeOptionFunc {
 // FloatingPointTolerance sets the tolerance when compariong Floating Point
 // values in tree operations.
 func FloatingPointTolerance(tol float64) treeOptionFunc {
-	return func(o *TreeOptions) {
+	return func(o *Options) {
 		o.fpTolerance = tol
 	}
 }
@@ -48,7 +48,7 @@ func Clone[T constraints.Ordered](t Tree[T]) Tree[T] {
 // Options can include things like what strategy to use when encountering
 // duplicate values, hints or reqeuirements on type of output tree, etc.
 func Join[T constraints.Ordered](a, b Tree[T], opts ...treeOptionFunc) Tree[T] {
-	treeOpts := defaultTreeOptions()
+	treeOpts := defaultOptions()
 	for _, opt := range opts {
 		opt(treeOpts)
 	}
@@ -85,7 +85,7 @@ func Rebalance[T constraints.Ordered](t Tree[T], val T) Tree[T] {
 //
 //	opts: Underlying type
 func Convert[T constraints.Ordered](t Tree[T], opts ...treeOptionFunc) Tree[T] {
-	treeOpts := defaultTreeOptions()
+	treeOpts := defaultOptions()
 	for _, opt := range opts {
 		opt(treeOpts)
 	}
@@ -131,12 +131,14 @@ func ToSlice[T constraints.Ordered](t Tree[T]) []T {
 //
 // This function supports changing the tolerance for floating point comparisons.
 func Equal[T constraints.Ordered](a, b Tree[T], opts ...treeOptionFunc) bool {
-	treeOpts := defaultTreeOptions()
+	treeOpts := defaultOptions()
 	for _, opt := range opts {
 		opt(treeOpts)
 	}
 
-	return false
+	// TODO(rsned): Once other types of Trees exist besides BinaryTree,
+	// enhance this to choose the appropriate equality.
+	return binaryTreesEqual(a.(BinaryTree[T]), b.(BinaryTree[T]))
 }
 
 // Equivalent reports if the two trees have the same node values in the same order.
@@ -147,12 +149,14 @@ func Equal[T constraints.Ordered](a, b Tree[T], opts ...treeOptionFunc) bool {
 //
 // This function supports changing the tolerance for floating point comparisons.
 func Equivalent[T constraints.Ordered](a, b Tree[T], opts ...treeOptionFunc) bool {
-	treeOpts := defaultTreeOptions()
+	treeOpts := defaultOptions()
 	for _, opt := range opts {
 		opt(treeOpts)
 	}
 
-	return false
+	// TODO(rsned): Once other types of Trees exist besides BinaryTree,
+	// enhance this to choose the appropriate equality.
+	return binaryTreesEquivalent(a.(BinaryTree[T]), b.(BinaryTree[T]))
 }
 
 // Summarize takes a tree and reports a set of basic facts about the tree.

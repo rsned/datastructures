@@ -39,6 +39,8 @@ type BinaryTree[T constraints.Ordered] interface {
 //
 // Best usage is to kick this off in a goroutine.
 func traverseBinaryTree[T constraints.Ordered](tree BinaryTree[T], tOrder TraverseOrder, ch chan T) {
+	// What to do if the type underlying the tree is nil?
+	// We can't nil check a pointer to an interface
 	switch tOrder {
 	case TraverseInOrder:
 		if tree.HasLeft() {

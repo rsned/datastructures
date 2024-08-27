@@ -1,11 +1,13 @@
 package tree
 
 import (
+	"bytes"
 	"fmt"
 
 	"golang.org/x/exp/constraints"
 )
 
+// avlNode is the actual node in an AVL tree.
 type avlNode[T constraints.Ordered] struct {
 	value T
 
@@ -22,30 +24,39 @@ type avlNode[T constraints.Ordered] struct {
 	right *avlNode[T]
 }
 
+// HasLeft reports if this node has a Left child.
 func (t *avlNode[T]) HasLeft() bool {
 	return t.left != nil
 }
 
+// Left returns this nodes Left child.
 func (t *avlNode[T]) Left() BinaryTree[T] {
 	return t.left
 }
 
+// HasRight reports if this node has a Right child.
 func (t *avlNode[T]) HasRight() bool {
 	return t.right != nil
 }
 
+// Right returns this nodes Right child.
 func (t *avlNode[T]) Right() BinaryTree[T] {
 	return t.right
 }
 
+// Value returns this nodes Value.
 func (t *avlNode[T]) Value() T {
 	return t.value
 }
 
+// Metadata returns a string of metadata about this node.
+// For AVL tree, this is tghe balance factor of the node.
 func (t *avlNode[T]) Metadata() string {
 	return fmt.Sprintf("BF:%2d", t.bf)
 }
 
+// balanceFactor returns the nodes balance factor.
+// TODO(rsned): Make this public?
 func (t *avlNode[T]) balanceFactor() int {
 	if t == nil {
 		return 0
@@ -53,7 +64,8 @@ func (t *avlNode[T]) balanceFactor() int {
 	return t.right.Height() - t.left.Height()
 }
 
-// Insert inserts the node into the tree, growing as needed.
+// Insert inserts the node into the tree, growing as needed, and reports
+// if the operation was successful.
 func (t *avlNode[T]) Insert(v T) bool {
 	if t == nil {
 		t = &avlNode[T]{
@@ -472,6 +484,10 @@ func rotateLeftRight[T constraints.Ordered](node *avlNode[T]) *avlNode[T] {
 // If the value is not in the tree, the tree is unchanged and false is returned.
 // If the node is not a leaf the trees internal structure may be updated.
 func (t *avlNode[T]) Delete(v T) bool {
+	if t == nil {
+		return false
+	}
+
 	return false
 }
 
@@ -492,10 +508,27 @@ func (t *avlNode[T]) Search(v T) bool {
 	return t.right.Search(v)
 }
 
-// Traverse traverse the tree in the specified order emitting the values to
+// Traverses traverse the tree in the specified order emitting the values to
 // the channel. Channel is closed once the final value is emitted.
-func (t *avlNode[T]) Traverse(w TraverseOrder) <-chan T {
-	return make(chan T)
+//
+// NOTE: Nodes in general are not expected to initiate the traverse. It would
+// normally be kicked off by the main container type, e.g., AVL not avlNode.
+func (t *avlNode[T]) Traverse(tOrder TraverseOrder) <-chan T {
+	ch := make(chan T)
+
+	// If the node is nil that we are trying to traverse, return the channel,
+	// but close it off since there is no way to have anythign to send.
+	if t == nil {
+		defer close(ch)
+		return ch
+	}
+
+	go func() {
+		traverseBinaryTree(t, tOrder, ch)
+		close(ch)
+	}()
+
+	return ch
 }
 
 // Height returns the height of the longest path in the tree from the
@@ -512,4 +545,20 @@ func (t *avlNode[T]) Height() int {
 	}
 
 	return rh + 1
+}
+
+func (t *avlNode[T]) toTestString(buf *bytes.Buffer, indent int) {
+	buf.WriteString(fmt.Sprintf("%svalue: %v,\n", testIndents[:indent], t.value))
+	buf.WriteString(fmt.Sprintf("%sbf: %d,\n", testIndents[:indent], t.bf))
+
+	if t.left != nil {
+		buf.WriteString(fmt.Sprintf("%sleft: &avlNode[T]{\n", testIndents[:indent]))
+		t.left.toTestString(buf, indent+1)
+		buf.WriteString(fmt.Sprintf("%s},\n", testIndents[:indent]))
+	}
+	if t.right != nil {
+		buf.WriteString(fmt.Sprintf("%sright: &avlNode[T]{\n", testIndents[:indent]))
+		t.right.toTestString(buf, indent+1)
+		buf.WriteString(fmt.Sprintf("%s},\n", testIndents[:indent]))
+	}
 }
