@@ -390,6 +390,18 @@ func TestBSTNodeBasics(t *testing.T) {
 		t.Errorf("t.Left().Left().HasLeft() == true, should be false")
 	}
 
+	if node.Left().Right().Left().HasLeft() {
+		t.Errorf("t.Left().Left().HasLeft() == true, should be false")
+	}
+
+	r := node.Right().Right()
+	if r.HasLeft() {
+		t.Errorf("aaa")
+	}
+	if r.HasRight() {
+		t.Errorf("aaa")
+	}
+
 	if node.Metadata() != "" {
 		t.Errorf("There should not be any metadata on BSTs")
 	}
