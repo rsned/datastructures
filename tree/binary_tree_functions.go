@@ -63,6 +63,8 @@ func binaryTreeStructureEqual[T constraints.Ordered](a, b BinaryTree[T]) bool {
 	return slices.Equal(aForm, bForm)
 }
 
+// binaryTreeStructure returns a string representation of the structure and
+// an in order path through the given tree.
 func binaryTreeStructure[T constraints.Ordered](tree BinaryTree[T]) []string {
 	ch := make(chan string)
 	go func() {
@@ -83,6 +85,8 @@ func binaryTreeStructure[T constraints.Ordered](tree BinaryTree[T]) []string {
 	return got
 }
 
+// traverseBinaryTreeStructure walks through a tree emitting directions and
+// nodes to the given channel.
 func traverseBinaryTreeStructure[T constraints.Ordered](tree BinaryTree[T], ch chan string) {
 	if isTreeNil(tree) {
 		return
