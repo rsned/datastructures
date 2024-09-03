@@ -50,7 +50,7 @@ func (t *avlNode[T]) Value() T {
 }
 
 // Metadata returns a string of metadata about this node.
-// For AVL tree, this is tghe balance factor of the node.
+// For AVL tree, this is the balance factor of the node.
 func (t *avlNode[T]) Metadata() string {
 	return fmt.Sprintf("BF:%2d", t.bf)
 }
@@ -61,6 +61,7 @@ func (t *avlNode[T]) balanceFactor() int {
 	if t == nil {
 		return 0
 	}
+
 	return t.right.Height() - t.left.Height()
 }
 
@@ -71,7 +72,10 @@ func (t *avlNode[T]) Insert(v T) bool {
 		t = &avlNode[T]{
 			value: v,
 			bf:    0,
+			left:  nil,
+			right: nil,
 		}
+
 		return true
 	}
 
@@ -96,12 +100,18 @@ func (t *avlNode[T]) Insert(v T) bool {
 		t.left = &avlNode[T]{
 			parent: t,
 			value:  v,
+			bf:     0,
+			left:   nil,
+			right:  nil,
 		}
 	} else {
 		// Or we need to add a new node to the right.
 		t.right = &avlNode[T]{
 			parent: t,
 			value:  v,
+			bf:     0,
+			left:   nil,
+			right:  nil,
 		}
 	}
 
@@ -114,9 +124,9 @@ func (t *avlNode[T]) Insert(v T) bool {
 	// is not the one that needs a rebalance. Start working our way up the tree
 	// looking for a node that is far enough out of balance.
 	for x := t; x != nil; x = x.parent {
-		// If this next level is balanced, move up and try again.
-		// We will either get to the root or find an imbalance.
-		if x.bf == 0 {
+		// If this next level is balanced enough, move up and try again.
+		// We will either get to the root or find a strong imbalance.
+		if x.bf >= -1 && x.bf <= 1 {
 			continue
 		}
 
@@ -124,11 +134,11 @@ func (t *avlNode[T]) Insert(v T) bool {
 			if x.right != nil {
 				// Check if it's Right-Right or Right-Left
 				if x.right.bf < 0 {
-					// Right Left Case
+					// Right-Left Case
 					// Double rotation: Right(Z) then Left(X)
 					rotateRightLeft(x)
 				} else if x.right.bf > 0 {
-					// Right Right Case
+					// Right-Right Case
 					// Single rotation Left(X)
 					rotateLeft(x)
 				}
@@ -137,27 +147,31 @@ func (t *avlNode[T]) Insert(v T) bool {
 			if x.left != nil {
 				// Check if it's Left-Right or Left-Left
 				if x.left.bf > 0 {
-					// Left Right Case
+					// Left-Right Case
 					// Double rotation: Left(Z) then Right(X)
 					rotateLeftRight(x)
 				} else if x.left.bf < 0 {
-					// Left Left Case
+					// Left-Left Case
 					// Single rotation Right
 					rotateRight(x)
 				}
 			}
 		}
 	}
+
 	return true
 }
 
 func updateBalanceFactors[T constraints.Ordered](node *avlNode[T]) {
 	const limit = 4
+
 	var i int
+
 	// Update the balance factor back up from here after adding the new node.
 	for x := node; x != nil; x = x.parent {
 		x.bf = x.balanceFactor()
 		i++
+
 		if i > limit {
 			break
 		}
@@ -372,7 +386,7 @@ func rotateLeft[T constraints.Ordered](node *avlNode[T]) *avlNode[T] {
 //
 // And once again balance is restored.
 func rotateRight[T constraints.Ordered](node *avlNode[T]) *avlNode[T] {
-	// Save its two children and its right childs two children.
+	// Save its two children and its left childs two children.
 	childL := node.left
 	childR := node.right
 	grandchildL := childL.left
@@ -471,12 +485,14 @@ func rotateRight[T constraints.Ordered](node *avlNode[T]) *avlNode[T] {
 func rotateRightLeft[T constraints.Ordered](node *avlNode[T]) *avlNode[T] {
 	rotateRight(node.right)
 	rotateLeft(node)
+
 	return node
 }
 
 func rotateLeftRight[T constraints.Ordered](node *avlNode[T]) *avlNode[T] {
 	rotateLeft(node.left)
 	rotateRight(node)
+
 	return node
 }
 
@@ -505,6 +521,7 @@ func (t *avlNode[T]) Search(v T) bool {
 	if v < t.value {
 		return t.left.Search(v)
 	}
+
 	return t.right.Search(v)
 }
 
@@ -517,9 +534,10 @@ func (t *avlNode[T]) Traverse(tOrder TraverseOrder) <-chan T {
 	ch := make(chan T)
 
 	// If the node is nil that we are trying to traverse, return the channel,
-	// but close it off since there is no way to have anythign to send.
+	// but close it off since there is no way to have anything to send.
 	if t == nil {
 		defer close(ch)
+
 		return ch
 	}
 
@@ -537,28 +555,34 @@ func (t *avlNode[T]) Height() int {
 	if t == nil {
 		return 0
 	}
-	lh := t.left.Height()
-	rh := t.right.Height()
 
-	if lh > rh {
-		return lh + 1
+	lHeight := t.left.Height()
+	rHeight := t.right.Height()
+
+	if lHeight > rHeight {
+		return lHeight + 1
 	}
 
-	return rh + 1
+	return rHeight + 1
 }
 
 func (t *avlNode[T]) toTestString(buf *bytes.Buffer, indent int) {
+	// testIndents is a sequence of tab characaters that are to be substringed
+	// at the necessary level for proper indenting of node text.
+	const testIndents = "\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t"
+
 	buf.WriteString(fmt.Sprintf("%svalue: %v,\n", testIndents[:indent], t.value))
 	buf.WriteString(fmt.Sprintf("%sbf: %d,\n", testIndents[:indent], t.bf))
 
 	if t.left != nil {
-		buf.WriteString(fmt.Sprintf("%sleft: &avlNode[T]{\n", testIndents[:indent]))
+		buf.WriteString(testIndents[:indent] + "left: &avlNode[T]{\n")
 		t.left.toTestString(buf, indent+1)
-		buf.WriteString(fmt.Sprintf("%s},\n", testIndents[:indent]))
+		buf.WriteString(testIndents[:indent] + "},\n")
 	}
+
 	if t.right != nil {
-		buf.WriteString(fmt.Sprintf("%sright: &avlNode[T]{\n", testIndents[:indent]))
+		buf.WriteString(testIndents[:indent] + "right: &avlNode[T]{\n")
 		t.right.toTestString(buf, indent+1)
-		buf.WriteString(fmt.Sprintf("%s},\n", testIndents[:indent]))
+		buf.WriteString(testIndents[:indent] + "},\n")
 	}
 }

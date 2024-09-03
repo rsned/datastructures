@@ -78,6 +78,9 @@ func TestAVLNodeInsert(t *testing.T) {
 		}
 
 		if !binaryTreesEqual(test.have, test.want) {
+			// TODO(rsned): Use dump_binary_tree here to get the two
+			// trees to show.
+			t.Errorf("value was inserted, but resulting tree was not correct.")
 		}
 	}
 }
@@ -117,7 +120,9 @@ func TestAVLNodeSearch(t *testing.T) {
 			want: false,
 		},
 		{
-			tree: &AVL[int]{},
+			tree: &AVL[int]{
+				root: nil,
+			},
 			val:  5,
 			want: false,
 		},
@@ -128,7 +133,6 @@ func TestAVLNodeSearch(t *testing.T) {
 			t.Errorf("Search(%v) = %v, want %v", test.val, got, test.want)
 		}
 	}
-
 }
 
 func TestAVLNodeHeight(t *testing.T) {
@@ -141,7 +145,9 @@ func TestAVLNodeHeight(t *testing.T) {
 			want: 0,
 		},
 		{
-			tree: &AVL[int]{},
+			tree: &AVL[int]{
+				root: nil,
+			},
 			want: 0,
 		},
 	}
@@ -155,20 +161,26 @@ func TestAVLNodeHeight(t *testing.T) {
 
 func TestAVLNodeTraverse(t *testing.T) {
 	node := &avlNode[int]{
-		value: 21,
-		bf:    -1,
+		value:  21,
+		bf:     -1,
+		parent: nil,
 		left: &avlNode[int]{
 			value: 1,
 			bf:    0,
 			left: &avlNode[int]{
 				value: -13,
 				bf:    0,
+				left:  nil,
+				right: nil,
 			},
 			right: &avlNode[int]{
 				value: 11,
 				bf:    0,
+				left:  nil,
+				right: nil,
 			},
 		},
+		right: nil,
 	}
 
 	tests := []struct {
@@ -207,6 +219,7 @@ func TestAVLNodeTraverse(t *testing.T) {
 		ch := test.tree.Traverse(test.order)
 
 		var got []int
+
 		for {
 			j, ok := <-ch
 			if ok {

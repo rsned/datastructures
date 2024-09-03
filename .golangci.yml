@@ -1,0 +1,10 @@
+linters:
+  # Disable specific linter
+  # https://golangci-lint.run/usage/linters/#disabled-by-default
+  disable:
+    - unused
+    - execinquery
+    - gomnd
+    - exportloopref
+    - paralleltest
+    - testpackage

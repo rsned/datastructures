@@ -30,7 +30,10 @@ func (t *AVL[T]) Insert(v T) bool {
 		t.root = &avlNode[T]{
 			value: v,
 			bf:    0,
+			left:  nil,
+			right: nil,
 		}
+
 		return true
 	}
 
@@ -71,6 +74,7 @@ func (t *AVL[T]) Height() int {
 	if t == nil {
 		return 0
 	}
+
 	return t.root.Height()
 }
 
@@ -79,8 +83,8 @@ func (t *AVL[T]) Height() int {
 // NOTE: This does not determine the exact type of T this instance is. It
 // simply prints the types as [T]. Updating is left to the consumer.
 func (t *AVL[T]) toTestString() string {
-
 	var buf bytes.Buffer
+
 	buf.WriteString("tree := &AVL[T]{\n")
 	buf.WriteString("\troot: &avlNode[T]{\n")
 
@@ -91,5 +95,3 @@ func (t *AVL[T]) toTestString() string {
 
 	return buf.String()
 }
-
-const testIndents = "\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t"

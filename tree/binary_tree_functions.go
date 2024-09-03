@@ -12,7 +12,7 @@ import (
 // As an initial pass, we start with step by step walking to see if they are the same.
 func binaryTreesEquivalent[T constraints.Ordered](a, b BinaryTree[T]) bool {
 	// If both are nil, then they are equivalent.
-	if isTreeNil(a) == isTreeNil(b) && isTreeNil(a) == true {
+	if isTreeNil(a) == isTreeNil(b) && isTreeNil(a) {
 		return true
 	}
 

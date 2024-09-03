@@ -84,6 +84,7 @@ func TestAVLTraverse(t *testing.T) {
 		ch := test.tree.Traverse(test.order)
 
 		var got []int
+
 		for {
 			j, ok := <-ch
 			if ok {
