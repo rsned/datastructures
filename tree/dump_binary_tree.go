@@ -28,22 +28,26 @@ const (
 	elementWidth = 5
 
 	indent      = "     "
-	nodeFmt     = " %3d "
-	nodeFmtT    = " %3v "
+	nodeFmt     = "~%3d~"
+	nodeFmtT    = "%3v"
 	nodeMetaFmt = "%5s"
-	leftRow1    = "    /"
-	leftRow2    = "   / "
-	leftRow3    = "  /  "
-	leftRow4    = " /   "
-	leftRow5    = "/    "
-	rightRow1   = "\\    "
-	rightRow2   = " \\   "
-	rightRow3   = "  \\  "
-	rightRow4   = "   \\ "
-	rightRow5   = "    \\"
-	rightRow6   = "     \\"
-	rightRow7   = "      \\"
-	underbar    = "_____"
+
+	leftLegBase  = "/"
+	rightLegBase = "\\"
+
+	leftRow1  = "/"
+	leftRow2  = "/ "
+	leftRow3  = "/  "
+	leftRow4  = "/   "
+	leftRow5  = "/    "
+	rightRow1 = "\\"
+	rightRow2 = " \\"
+	rightRow3 = "  \\"
+	rightRow4 = "   \\"
+	rightRow5 = "    \\"
+	rightRow6 = "     \\"
+	rightRow7 = "      \\"
+	underbar  = "_____"
 )
 
 var (
@@ -72,72 +76,53 @@ var (
 	// when multiple instances are needed in a row.
 	underbarFull = strings.Repeat(underbar, 40)
 	indentFull   = strings.Repeat(indent, 40)
+	prefixPad    = strings.Repeat("P", 40)
+	shoulderPad  = strings.Repeat("S", 40)
+	interPad     = strings.Repeat("I", 40)
+	intraPad     = strings.Repeat("i", 40)
+	otherPad     = strings.Repeat("#", 40)
+	otherPad2    = strings.Repeat("$", 40)
+	legPad       = strings.Repeat("L", 40)
 )
 
 // indentOptions tracks the spacings used at a given depth and tree height for a given node width.
 type indentOptions struct {
+	// indentWidth is how wide in number of spaces one indent "unit" is for this
+	// set of options.  For trees with all narrow values, the width will be smaller.
+	indentWidth int
+
 	// prefixPadding is how much spacing to start the beginning of a line with.
-	// It is 2*height_from_bottom + 1 (where the height is 0 based).
+	//
+	// This is measured in spaces.
 	prefixPadding int
 
 	// intraNodePadding is the spacing between the left and right legs of the tree.
+	//
+	// This is measured in spaces.
 	intraNodePadding int
 
 	// interTreePadding is the spacing between each set of trees at this level.
+	//
+	// This is measured in units of indentWidth
 	interTreePadding int
 
 	// shoulderPadding is how much lateral filler we need between the top of a leg
 	// and the levels node. (rather than growing the diagonal 2^n vertically, we
 	// limit it to 5 vertical levels and then go sideways to make up the space.)
+	//
+	// This is in spaces.
 	shoulderPadding int
 
 	// legDepth tracks how many of the vertical levels of the legs to show.
 	legDepth int
 }
 
-var (
-	// treeIndents is a mapping of distance from bottom level being rendered
-	// to that level's indent options. By virtue of how wide things start to
-	// get at 5 levels of tree, we don't plan to support more than that as text.
-	treeIndents = map[int]indentOptions{
-		0: indentOptions{
-			prefixPadding:    0,
-			intraNodePadding: 1,
-			interTreePadding: 1,
-			shoulderPadding:  0,
-			legDepth:         4,
-		},
-		1: indentOptions{
-			prefixPadding:    0,
-			intraNodePadding: 1,
-			interTreePadding: 1,
-			shoulderPadding:  0,
-			legDepth:         5,
-		},
-		2: indentOptions{
-			prefixPadding:    2,
-			intraNodePadding: 1,
-			interTreePadding: 5,
-			shoulderPadding:  0,
-			legDepth:         5,
-		},
-		3: indentOptions{
-			prefixPadding:    4,
-			intraNodePadding: 1,
-			interTreePadding: 9,
-			shoulderPadding:  2,
-			legDepth:         5,
-		},
-		// For a tree of height 5, this is the root node, so there is no
-		// more tree or node padding above it so those values are 0.
-		4: indentOptions{
-			prefixPadding:    8,
-			intraNodePadding: 1,
-			interTreePadding: 0,
-			shoulderPadding:  6,
-			legDepth:         5,
-		},
-	}
+const (
+	depthBottom      = 0
+	depthBottomPlus1 = 1
+	depthBottomPlus2 = 2
+	depthBottomPlus3 = 3
+	depthBottomPlus4 = 4
 )
 
 // RenderMode is an enum for potential outputs when dumping or rendering the trees.
@@ -147,6 +132,8 @@ type RenderMode int
 const (
 	ModeASCII RenderMode = iota
 	ModeSVG
+
+	// TODO(rsned): Add more modes?
 )
 
 // RenderBinaryTree returns the given tree in the given mode rendered into string form.
@@ -175,12 +162,13 @@ func dumpBinaryTree[T constraints.Ordered](label string, t BinaryTree[T]) string
 		return buf.String()
 	}
 
-	height := t.Height()
+	stats := analyzeTree(t)
+	height := stats.height
 	node := t
 	nodes := []BinaryTree[T]{node}
 	var nextNodes []BinaryTree[T]
 	depthFrom := height - 1
-	indentOpts := treeIndents[depthFrom]
+	indentOpts := optsForStats(depthFrom, stats.widestValue)
 
 	// First pass starts with the root node, then we go into the loop of
 	// legs and nodes until we are all done.
@@ -191,7 +179,7 @@ func dumpBinaryTree[T constraints.Ordered](label string, t BinaryTree[T]) string
 		outputLegs(nextNodes, indentOpts, &buf, depthFrom)
 
 		depthFrom--
-		indentOpts = treeIndents[depthFrom]
+		indentOpts = optsForStats(depthFrom, stats.widestValue)
 		nodes = nextNodes
 		outputNodes(nodes, indentOpts, &buf, depthFrom)
 	}
@@ -199,13 +187,14 @@ func dumpBinaryTree[T constraints.Ordered](label string, t BinaryTree[T]) string
 	return buf.String()
 }
 
-// writeLeg replaces the boilerplate with a simple helper.
-func writeLeg[T constraints.Ordered](leg BinaryTree[T], legString string, buf *bytes.Buffer) {
-	if leg != nil {
-		buf.WriteString(legString)
-	} else {
-		buf.WriteString(indent)
+func optsForStats(depthFrom, widest int) indentOptionsMap {
+	if widest <= 1 {
+		return binaryTreeSpacingData[1]
 	}
+	if widest <= 3 {
+		return binaryTreeSpacingData[3]
+	}
+	return binaryTreeSpacingData[5]
 }
 
 // generateLevelsNodes ranges over the given set of nodes generating a new
@@ -252,27 +241,38 @@ func lastNonNilNode[T constraints.Ordered](nodes []BinaryTree[T]) int {
 	return 0
 }
 
+// writeLeg replaces the boilerplate with a simple helper.
+func writeLeg[T constraints.Ordered](leg BinaryTree[T], legString string, indentString string, buf *bytes.Buffer) {
+	if leg != nil {
+		buf.WriteString(legString)
+	} else {
+		//buf.WriteString(indentString)
+		buf.WriteString(legString)
+	}
+}
+
 // outputLegs does the boring bits of printing out visible or missing legs and the
 // appropriate spacings between each one.
-//
-// TODO(rsned): Not visible in the end, but would be nice to not print the
-// final appended spacing on the last potential tree leg.
-// TODO(rsned): Minor enhancement would be to be able to skip the rest of a line
-// when we get to the last actual leg piece of a row and the remaining parts
-// would all just be spacings.
-func outputLegs[T constraints.Ordered](nodes []BinaryTree[T], opts indentOptions, buf *bytes.Buffer, depthFrom int) {
-
+func outputLegs[T constraints.Ordered](nodes []BinaryTree[T], indentOptions indentOptionsMap, buf *bytes.Buffer, depthFrom int) {
+	opts := indentOptions[depthFrom]
+	nodeSize := opts.indentWidth
 	lastNode := lastNonNilNode(nodes)
 	for i, ll := range leftLegs[:opts.legDepth] {
-		buf.WriteString(indentFull[:elementWidth*opts.prefixPadding])
+		buf.WriteString(prefixPad[:opts.prefixPadding])
 		for j := 0; j < len(nodes); j++ {
 			if j > lastNode {
 				break
 			}
-			writeLeg(nodes[j], ll, buf)
+
+			legDepthPad := opts.legDepth - 1 - i
+
+			// offset is based on number of legs to be drawn at this level.
+			// left leg needs to be limited to this legDepth.
+			leftLeg := otherPad[:legDepthPad] + ll
+			writeLeg(nodes[j], leftLeg, indentFull[:opts.legDepth], buf)
 
 			// If this level has lateral legs, put in blanks to cover.
-			buf.WriteString(indentFull[:elementWidth*opts.shoulderPadding])
+			buf.WriteString(shoulderPad[:opts.shoulderPadding])
 
 			// Right legs are the next value, so jump forward to them.
 			j++
@@ -287,17 +287,19 @@ func outputLegs[T constraints.Ordered](nodes []BinaryTree[T], opts indentOptions
 			// The spacing between the two legs in the tree.
 			// Higher up nodes in the tree have more spacing to handle
 			// the fanout as the tree grows.
-			buf.WriteString(indentFull[:elementWidth*opts.intraNodePadding])
+			buf.WriteString(intraPad[:nodeSize])
 
 			// If this level has lateral leg elements, put in blanks to cover.
-			buf.WriteString(indentFull[:elementWidth*opts.shoulderPadding])
+			buf.WriteString(shoulderPad[:opts.shoulderPadding])
 
-			writeLeg(nodes[j], rightLegs[i], buf)
+			// right leg needs to be limited to legDepth
+			rl := rightLegs[i] + otherPad2[:legDepthPad]
+			writeLeg(nodes[j], rl, indentFull[:opts.legDepth], buf)
 
 			// For all but the final node in the list.
 			if j != len(nodes)-1 {
 				// Spacing between subtrees.
-				buf.WriteString(indentFull[:elementWidth*opts.interTreePadding])
+				buf.WriteString(interPad[:opts.interTreePadding])
 			}
 		}
 		buf.WriteString("\n")
@@ -305,48 +307,79 @@ func outputLegs[T constraints.Ordered](nodes []BinaryTree[T], opts indentOptions
 }
 
 // outputNodes writes out all the nodes and metadata at this level.
-func outputNodes[T constraints.Ordered](nodes []BinaryTree[T], opts indentOptions, buf *bytes.Buffer, depthFrom int) {
+func outputNodes[T constraints.Ordered](nodes []BinaryTree[T], indentOptions indentOptionsMap, buf *bytes.Buffer, depthFrom int) {
+	opts := indentOptions[depthFrom]
+	nodeSize := opts.indentWidth
+	parentOpts := indentOptions[depthFrom+1]
 	lastNode := lastNonNilNode(nodes)
 
 	// Nodes.
-	buf.WriteString(indentFull[:elementWidth*opts.prefixPadding])
+	buf.WriteString(prefixPad[:opts.prefixPadding])
 	for j, n := range nodes {
-		// This indent lines up with the space used to print left leg lines.
-		// At the lowest level, there are no legs, so this leg padding needs to go.
-		if depthFrom != 0 {
-			buf.WriteString(indent)
+		// For all rows except the bottom row,  each node potentially has
+		// both left and right legs below it that need to be padded for.
+		if depthFrom != 0 || (depthFrom == 0 && j != 0 && j%2 == 1) {
+			buf.WriteString(legPad[:opts.legDepth])
+			//} else {
+			//buf.WriteString("*")
 		}
 
 		// Higher up levels have lines that go sideways to keep the tree
 		// reasonably sized.
 		if n != nil && n.HasLeft() {
-			buf.WriteString(underbarFull[:elementWidth*opts.shoulderPadding])
+			buf.WriteString(underbarFull[:opts.shoulderPadding])
 		} else {
-			buf.WriteString(indentFull[:elementWidth*opts.shoulderPadding])
+			//buf.WriteString(shoulderPad[:opts.shoulderPadding])
+			buf.WriteString(underbarFull[:opts.shoulderPadding])
 		}
 
 		// The actual node value.
 		if n != nil {
-			buf.WriteString(fmt.Sprintf(nodeFmtT, n.Value()))
+			buf.WriteString(centerString(fmt.Sprintf(nodeFmtT, n.Value()), " ",
+				nodeSize))
 		} else {
-			buf.WriteString(indent)
+			buf.WriteString(indentFull[:nodeSize])
 		}
 
 		if n != nil && n.HasRight() {
-			buf.WriteString(underbarFull[:elementWidth*opts.shoulderPadding])
+			buf.WriteString(underbarFull[:opts.shoulderPadding])
 		} else {
-			buf.WriteString(indentFull[:elementWidth*opts.shoulderPadding])
+			//buf.WriteString(shoulderPad[:opts.shoulderPadding])
+			buf.WriteString(underbarFull[:opts.shoulderPadding])
 		}
 		// If this is the last node, skip all the remaining trailing padding.
 		if j >= lastNode {
 			break
 		}
 
-		// This indent lines up with the right leg lines.
-		if depthFrom != 0 {
-			buf.WriteString(indent)
+		// This is the padding to match the leg above it.
+		// If this is an even index, then we want the padding to match
+		// the number of leg segments leading down into this node
+		// on the inside of the node values.
+		// if j%2 == 0 {
+		buf.WriteString(legPad[:opts.legDepth])
+		// } else {
+		// buf.WriteString("*")
+		// }
+
+		// Between the even and odd indexes the spacing breakdown
+		// matches what the outputLegs does (combination of shoulder
+		// spacing and nodeWidth but based on the next higher level
+		// ups indent optiond. e.g Even index values represent
+		// left legs and odd indexes represent right legs.
+		//
+		inter := (parentOpts.legDepth + parentOpts.shoulderPadding) -
+			(opts.legDepth + opts.shoulderPadding)
+		if j%2 == 0 {
+			//buf.WriteString(shoulderPad[:opts.shoulderPadding])
+			buf.WriteString(shoulderPad[:inter])
+			buf.WriteString(intraPad[:nodeSize])
+			buf.WriteString(shoulderPad[:inter])
+
+		} else {
+			// Finish off with the spacing between the trees.
+			buf.WriteString(interPad[:opts.interTreePadding])
 		}
-		buf.WriteString(indentFull[:elementWidth*opts.interTreePadding])
 	}
 	buf.WriteString("\n")
 
@@ -355,29 +388,32 @@ func outputNodes[T constraints.Ordered](nodes []BinaryTree[T], opts indentOption
 	}
 
 	// Add metadata print
-	buf.WriteString(indentFull[:elementWidth*opts.prefixPadding])
+	buf.WriteString(prefixPad[:opts.prefixPadding])
 	for j, n := range nodes {
 		// This indent lines up with the left leg lines.
 		if depthFrom != 0 {
-			buf.WriteString(indent)
+			buf.WriteString(indentFull[:nodeSize])
+			// buf.WriteString(indent)
 		}
-		buf.WriteString(indentFull[:elementWidth*opts.shoulderPadding])
+		buf.WriteString(shoulderPad[:opts.shoulderPadding])
 		if n != nil {
 			buf.WriteString(fmt.Sprintf(nodeMetaFmt, n.Metadata()))
 		} else {
-			buf.WriteString(indent)
+			buf.WriteString(indentFull[:nodeSize])
+			// buf.WriteString(indent)
 		}
 		// If this is the last node, skip all the remaining trailing padding.
 		if j >= lastNode {
 			break
 		}
 
-		buf.WriteString(indentFull[:elementWidth*opts.shoulderPadding])
+		buf.WriteString(shoulderPad[:opts.shoulderPadding])
 		// This indent lines up with the right leg lines.
 		if depthFrom != 0 {
-			buf.WriteString(indent)
+			buf.WriteString(indentFull[:nodeSize])
+			// buf.WriteString(indent)
 		}
-		buf.WriteString(indentFull[:elementWidth*opts.interTreePadding])
+		buf.WriteString(interPad[:opts.interTreePadding])
 	}
 	buf.WriteString("\n")
 }
@@ -396,11 +432,11 @@ func levelHasMetadata[T constraints.Ordered](nodes []BinaryTree[T]) bool {
 	return has
 }
 
-// centerString centers the given string into the target size adjusting the whitespace at
-// either end as needed.
+// centerString centers the given string into the target size adjusting the space at
+// either end as needed with the given pad character.
 //
 // This method assumes an output width of 50 or less for the purpose of this file.
-func centerString(s string, width int) string {
+func centerString(s, padChar string, width int) string {
 	s = strings.TrimSpace(s)
 	l := len(s)
 
@@ -409,9 +445,57 @@ func centerString(s string, width int) string {
 		return s
 	}
 
-	lPad := (width - l) / 2
+	// We attempt to right justify uneven splits so values will sit
+	// slightly more right than left when they can't be balanced.
+	lPad := ((width - l) / 2) + 1
 	rPad := width - l - lPad
 
+	// TODO(rsned): replace spaces with the padChar
 	const spaces = "                                                                     "
 	return fmt.Sprintf("%s%s%s", spaces[0:lPad], s, spaces[0:rPad])
+}
+
+type dumpTreeStats struct {
+	height      int
+	leftHeight  int
+	rightHeight int
+	widestValue int
+}
+
+// analyzeTree takes the givern tree and attempts to find out relevant details
+// about it to assist in the rendering.
+func analyzeTree[T constraints.Ordered](tree BinaryTree[T]) dumpTreeStats {
+
+	stats := dumpTreeStats{
+		height:      tree.Height(),
+		leftHeight:  tree.Left().Height(),
+		rightHeight: tree.Right().Height(),
+	}
+
+	// things we want to find out:
+	// max height
+	// width of largest value
+	// lopsidedness / skew   e.g. is this only a one sided binary tree?
+
+	// Walk the tree getting all values and printing them as strings.
+	ch := tree.Traverse(TraverseInOrder)
+
+	var widest int
+	var got []string
+	for {
+		val, ok := <-ch
+		if ok {
+			s := fmt.Sprintf("%v", val)
+			if len(s) > widest {
+				widest = len(s)
+			}
+			got = append(got, fmt.Sprintf("%v", s))
+		} else {
+			break
+		}
+	}
+
+	stats.widestValue = widest
+
+	return stats
 }
