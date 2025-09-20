@@ -19,13 +19,13 @@ func TestBSTNodeInsert(t *testing.T) {
 			want: true,
 		},
 		{
-			tree: &BST[int]{},
+			tree: &BST[int]{root: nil},
 			val:  5,
 			want: true,
 		},
 		{
 			// Test insert into a nil node.
-			tree: (&bstNode[int]{}).left,
+			tree: (&bstNode[int]{value: 0, left: nil, right: nil}).left,
 			val:  5,
 			want: false,
 		},
@@ -33,6 +33,8 @@ func TestBSTNodeInsert(t *testing.T) {
 			// Insert to left.
 			tree: &BST[int]{
 				root: &bstNode[int]{
+					left:  nil,
+					right: nil,
 					value: 42,
 				},
 			},
@@ -43,6 +45,8 @@ func TestBSTNodeInsert(t *testing.T) {
 			// Insert to right.
 			tree: &BST[int]{
 				root: &bstNode[int]{
+					left:  nil,
+					right: nil,
 					value: 42,
 				},
 			},
@@ -53,6 +57,8 @@ func TestBSTNodeInsert(t *testing.T) {
 			// Attempt to insert a duplicate value.
 			tree: &BST[int]{
 				root: &bstNode[int]{
+					left:  nil,
+					right: nil,
 					value: 42,
 				},
 			},
@@ -68,19 +74,27 @@ func TestBSTNodeInsert(t *testing.T) {
 						value: 21,
 						left: &bstNode[int]{
 							value: 1,
+							left:  nil,
+							right: nil,
 						},
 						right: &bstNode[int]{
 							value: 30,
 							left: &bstNode[int]{
 								value: 29,
+								left:  nil,
+								right: nil,
 							},
+							right: nil,
 						},
 					},
 					right: &bstNode[int]{
 						value: 84,
 						left: &bstNode[int]{
 							value: 57,
+							left:  nil,
+							right: nil,
 						},
+						right: nil,
 					},
 				},
 			},
@@ -96,19 +110,27 @@ func TestBSTNodeInsert(t *testing.T) {
 						value: 21,
 						left: &bstNode[int]{
 							value: 1,
+							left:  nil,
+							right: nil,
 						},
 						right: &bstNode[int]{
 							value: 30,
 							left: &bstNode[int]{
 								value: 28,
+								left:  nil,
+								right: nil,
 							},
+							right: nil,
 						},
 					},
 					right: &bstNode[int]{
 						value: 84,
 						left: &bstNode[int]{
 							value: 57,
+							left:  nil,
+							right: nil,
 						},
+						right: nil,
 					},
 				},
 			},
@@ -132,15 +154,17 @@ func TestBSTNodeDelete(t *testing.T) {
 	}{
 		{
 			tree: NewBST[int](),
+			val:  0,
 			want: false,
 		},
 		{
-			tree: &BST[int]{},
+			tree: &BST[int]{root: nil},
+			val:  0,
 			want: false,
 		},
 		{
 			// Test insert into a nil node.
-			tree: (&bstNode[int]{}).left,
+			tree: (&bstNode[int]{value: 0, left: nil, right: nil}).left,
 			val:  5,
 			want: false,
 		},
@@ -149,8 +173,11 @@ func TestBSTNodeDelete(t *testing.T) {
 			tree: &BST[int]{
 				root: &bstNode[int]{
 					value: 42,
+					left:  nil,
+					right: nil,
 				},
 			},
+			val:  0,
 			want: false,
 		},
 	}
@@ -174,7 +201,7 @@ func TestBSTNodeSearch(t *testing.T) {
 			want: false,
 		},
 		{
-			tree: &BST[int]{},
+			tree: &BST[int]{root: nil},
 			val:  5,
 			want: false,
 		},
@@ -183,6 +210,8 @@ func TestBSTNodeSearch(t *testing.T) {
 			tree: &BST[int]{
 				root: &bstNode[int]{
 					value: 42,
+					left:  nil,
+					right: nil,
 				},
 			},
 			val:  5,
@@ -196,19 +225,27 @@ func TestBSTNodeSearch(t *testing.T) {
 						value: 21,
 						left: &bstNode[int]{
 							value: 1,
+							left:  nil,
+							right: nil,
 						},
 						right: &bstNode[int]{
 							value: 30,
 							left: &bstNode[int]{
 								value: 29,
+								left:  nil,
+								right: nil,
 							},
+							right: nil,
 						},
 					},
 					right: &bstNode[int]{
 						value: 84,
 						left: &bstNode[int]{
 							value: 57,
+							left:  nil,
+							right: nil,
 						},
+						right: nil,
 					},
 				},
 			},
@@ -222,7 +259,6 @@ func TestBSTNodeSearch(t *testing.T) {
 			t.Errorf("Search(%v) = %v, want %v", test.val, got, test.want)
 		}
 	}
-
 }
 
 func TestBSTNodeHeight(t *testing.T) {
@@ -235,7 +271,7 @@ func TestBSTNodeHeight(t *testing.T) {
 			want: 0,
 		},
 		{
-			tree: &BST[int]{},
+			tree: &BST[int]{root: nil},
 			want: 0,
 		},
 		{
@@ -243,6 +279,8 @@ func TestBSTNodeHeight(t *testing.T) {
 			tree: &BST[int]{
 				root: &bstNode[int]{
 					value: 42,
+					left:  nil,
+					right: nil,
 				},
 			},
 			want: 1,
@@ -255,19 +293,27 @@ func TestBSTNodeHeight(t *testing.T) {
 						value: 21,
 						left: &bstNode[int]{
 							value: 1,
+							left:  nil,
+							right: nil,
 						},
 						right: &bstNode[int]{
 							value: 30,
 							left: &bstNode[int]{
 								value: 29,
+								left:  nil,
+								right: nil,
 							},
+							right: nil,
 						},
 					},
 					right: &bstNode[int]{
 						value: 84,
 						left: &bstNode[int]{
 							value: 57,
+							left:  nil,
+							right: nil,
 						},
+						right: nil,
 					},
 				},
 			},
@@ -290,19 +336,27 @@ func TestBSTNodeTraverse(t *testing.T) {
 				value: 21,
 				left: &bstNode[int]{
 					value: 1,
+					left:  nil,
+					right: nil,
 				},
 				right: &bstNode[int]{
 					value: 30,
 					left: &bstNode[int]{
 						value: 29,
+						left:  nil,
+						right: nil,
 					},
+					right: nil,
 				},
 			},
 			right: &bstNode[int]{
 				value: 84,
 				left: &bstNode[int]{
 					value: 57,
+					left:  nil,
+					right: nil,
 				},
+				right: nil,
 			},
 		},
 	}
@@ -366,19 +420,27 @@ func TestBSTNodeBasics(t *testing.T) {
 			value: 21,
 			left: &bstNode[int]{
 				value: 1,
+				left:  nil,
+				right: nil,
 			},
 			right: &bstNode[int]{
 				value: 30,
 				left: &bstNode[int]{
 					value: 29,
+					left:  nil,
+					right: nil,
 				},
+				right: nil,
 			},
 		},
 		right: &bstNode[int]{
 			value: 84,
 			left: &bstNode[int]{
 				value: 57,
+				left:  nil,
+				right: nil,
 			},
+			right: nil,
 		},
 	}
 

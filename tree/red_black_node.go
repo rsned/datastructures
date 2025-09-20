@@ -42,6 +42,7 @@ func (t *redBlackNode[T]) Metadata() string {
 	if t.isRed {
 		return "Red"
 	}
+
 	return "Black"
 }
 
@@ -58,26 +59,41 @@ func (t *redBlackNode[T]) Insert(v T) bool {
 
 	if v < t.value {
 		if t.left == nil {
-			t.left = &redBlackNode[T]{value: v}
+			t.left = &redBlackNode[T]{
+				value: v,
+				isRed: true,
+				left:  nil,
+				right: nil,
+			}
+
 			return true
 		}
+
 		return t.left.Insert(v)
 	}
 
 	if t.right == nil {
-		t.right = &redBlackNode[T]{value: v}
+		t.right = &redBlackNode[T]{
+			value: v,
+			isRed: true,
+			left:  nil,
+			right: nil,
+		}
+
 		return true
 	}
+
 	return t.right.Insert(v)
 }
 
 // Delete the requested node from the tree and reports if it was successful.
 // If the value is not in the tree, the tree is unchanged and false is returned.
 // If the node is not a leaf the trees internal structure may be updated.
-func (t *redBlackNode[T]) Delete(v T) bool {
+func (t *redBlackNode[T]) Delete(_ T) bool {
 	if t == nil {
 		return false
 	}
+
 	return false
 }
 
@@ -93,6 +109,7 @@ func (t *redBlackNode[T]) Search(v T) bool {
 	if v < t.value {
 		return t.left.Search(v)
 	}
+
 	return t.right.Search(v)
 }
 
@@ -119,5 +136,6 @@ func (t *redBlackNode[T]) Height() int {
 	if lh > rh {
 		return lh + 1
 	}
+
 	return rh + 1
 }

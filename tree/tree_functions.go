@@ -7,7 +7,7 @@ type Options struct {
 	// ignoreDuplicates indicates of duplicate values
 	ignoreDuplicates bool
 
-	// FPTolerance is used to set floating point tolerance for equality
+	// fpTolerance is used to set floating point tolerance for equality
 	// comparisons.
 	fpTolerance float64
 }
@@ -20,11 +20,11 @@ func defaultOptions() *Options {
 }
 
 // treeOptionFunc is a function to set options for use in variadic opt params.
-type treeOptionFunc func(c *Options)
+type OptionFunc func(c *Options)
 
 // IgnoreDuplicates tells the tree function that a duplicate value in an
 // operation should be ignored. (Such as when joining two Trees)
-func IgnoreDuplicates(ignore bool) treeOptionFunc {
+func IgnoreDuplicates(ignore bool) OptionFunc {
 	return func(o *Options) {
 		o.ignoreDuplicates = ignore
 	}
@@ -32,7 +32,7 @@ func IgnoreDuplicates(ignore bool) treeOptionFunc {
 
 // FloatingPointTolerance sets the tolerance when compariong Floating Point
 // values in tree operations.
-func FloatingPointTolerance(tol float64) treeOptionFunc {
+func FloatingPointTolerance(tol float64) OptionFunc {
 	return func(o *Options) {
 		o.fpTolerance = tol
 	}
@@ -40,18 +40,21 @@ func FloatingPointTolerance(tol float64) treeOptionFunc {
 
 // Clone returns a complete new copy of the given tree.
 func Clone[T constraints.Ordered](t Tree[T]) Tree[T] {
+	// TODO(rsned): Implement this.
 	return t
 }
 
-// Join combines the given trees using the options (if any).
+// Join attempts to merge the given trees following the given options (if any).
 //
 // Options can include things like what strategy to use when encountering
-// duplicate values, hints or reqeuirements on type of output tree, etc.
-func Join[T constraints.Ordered](a, b Tree[T], opts ...treeOptionFunc) Tree[T] {
+// duplicate values, hints or requirements on type of output tree, etc.
+func Join[T constraints.Ordered](a, _ Tree[T], opts ...OptionFunc) Tree[T] {
 	treeOpts := defaultOptions()
 	for _, opt := range opts {
 		opt(treeOpts)
 	}
+
+	// TODO(rsned): Implement this.
 	return a
 }
 
@@ -61,41 +64,53 @@ func Join[T constraints.Ordered](a, b Tree[T], opts ...treeOptionFunc) Tree[T] {
 //
 // If the value falls between two nodes in the tree, then tree one will end at
 // the value closest without exceeding the given value.
-func Split[T constraints.Ordered](t Tree[T], val T) (Tree[T], Tree[T]) {
+//
+// The resulting Trees are NOT guaranteed to be balanced or optimal.
+//
+// Your right to be foolish is supported. For example splitting on a value
+// outside the trees limits will give back the original tree and a nil tree.
+func Split[T constraints.Ordered](t Tree[T], _ T) (Tree[T], Tree[T]) {
+	// TODO(rsned): Implement this.
 	return t, t
 }
 
 // Prune removes the whole subtree that is homed at val.
-func Prune[T constraints.Ordered](t Tree[T], val T) Tree[T] {
+func Prune[T constraints.Ordered](t Tree[T], _ T) Tree[T] {
+	// TODO(rsned): Implement this.
 	return t
 }
 
 // Rebalance attempts to perform some rebalancing on a tree.
 //
-// Not all types need it so those types may short-circuit this.
-func Rebalance[T constraints.Ordered](t Tree[T], val T) Tree[T] {
+// Not all types need after-market balancing, so those types may
+// short-circuit this call.
+func Rebalance[T constraints.Ordered](t Tree[T], _ T) Tree[T] {
+	// TODO(rsned): Implement this.
 	return t
 }
 
 // Convert attempts to convert the given tree into a tree of a type specified
-// in the options.
+// in the options. For example, Convert a BST to an AVL tree.
 //
 // More discourse will follow on how different combinations of options will
 // be handled such as specifying multiple tree types, etc.
 //
 //	opts: Underlying type
-func Convert[T constraints.Ordered](t Tree[T], opts ...treeOptionFunc) Tree[T] {
+func Convert[T constraints.Ordered](t Tree[T], opts ...OptionFunc) Tree[T] {
 	treeOpts := defaultOptions()
 	for _, opt := range opts {
 		opt(treeOpts)
 	}
 
+	// TODO(rsned): Implement this.
 	return t
 }
 
 // ToSlice converts the tree to a slice in natural order.
-func ToSlice[T constraints.Ordered](t Tree[T]) []T {
+func ToSlice[T constraints.Ordered](_ Tree[T]) []T {
 	var x []T
+
+	// TODO(rsned): Implement this.
 	return x
 }
 
@@ -127,10 +142,10 @@ func ToSlice[T constraints.Ordered](t Tree[T]) []T {
 //	2
 //
 // It would be equivalent, but not equal, because it has the same node
-// values in an In Order traversal, but the structure is different.
+// values in an In-Order traversal, but the structure is different.
 //
 // This function supports changing the tolerance for floating point comparisons.
-func Equal[T constraints.Ordered](a, b Tree[T], opts ...treeOptionFunc) bool {
+func Equal[T constraints.Ordered](a, b Tree[T], opts ...OptionFunc) bool {
 	treeOpts := defaultOptions()
 	for _, opt := range opts {
 		opt(treeOpts)
@@ -138,17 +153,24 @@ func Equal[T constraints.Ordered](a, b Tree[T], opts ...treeOptionFunc) bool {
 
 	// TODO(rsned): Once other types of Trees exist besides BinaryTree,
 	// enhance this to choose the appropriate equality.
-	return binaryTreesEqual(a.(BinaryTree[T]), b.(BinaryTree[T]))
+	aBinary, aOk := a.(BinaryTree[T])
+	bBinary, bOk := b.(BinaryTree[T])
+	if !aOk || !bOk {
+		return false
+	}
+
+	return BinaryTreesEqual(aBinary, bBinary)
 }
 
-// Equivalent reports if the two trees have the same node values in the same order.
-// This is essentially reporting if the two trees have the same In Order traversal
-// outputs, but not caring about the underlying structure.
+// Equivalent reports if the two trees have the same node values in the same
+// order. This is essentially reporting if the two trees have the same In-Order
+// traversal outputs, but not caring about the underlying structure or
+// implementation.
 //
 // See the description for Equal for examples of this.
 //
 // This function supports changing the tolerance for floating point comparisons.
-func Equivalent[T constraints.Ordered](a, b Tree[T], opts ...treeOptionFunc) bool {
+func Equivalent[T constraints.Ordered](a, b Tree[T], opts ...OptionFunc) bool {
 	treeOpts := defaultOptions()
 	for _, opt := range opts {
 		opt(treeOpts)
@@ -156,7 +178,13 @@ func Equivalent[T constraints.Ordered](a, b Tree[T], opts ...treeOptionFunc) boo
 
 	// TODO(rsned): Once other types of Trees exist besides BinaryTree,
 	// enhance this to choose the appropriate equality.
-	return binaryTreesEquivalent(a.(BinaryTree[T]), b.(BinaryTree[T]))
+	aBinary, aOk := a.(BinaryTree[T])
+	bBinary, bOk := b.(BinaryTree[T])
+	if !aOk || !bOk {
+		return false
+	}
+
+	return BinaryTreesEquivalent(aBinary, bBinary)
 }
 
 // Summarize takes a tree and reports a set of basic facts about the tree.
@@ -164,6 +192,7 @@ func Equivalent[T constraints.Ordered](a, b Tree[T], opts ...treeOptionFunc) boo
 // tree size, etc.
 //
 // TODO(rsned): See about generating a struct with interesting fields.
-func Summarize[T constraints.Ordered](t Tree[T]) string {
+func Summarize[T constraints.Ordered](_ Tree[T]) string {
+	// TODO(rsned): Implement this.
 	return ""
 }

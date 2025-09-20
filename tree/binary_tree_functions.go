@@ -7,10 +7,12 @@ import (
 	"golang.org/x/exp/constraints"
 )
 
-// binaryTreesEquivalent tests if two BinaryTrees have the same values in the same order.
+// BinaryTreesEquivalent tests if two BinaryTrees have the same values
+// in the same order.
 //
-// As an initial pass, we start with step by step walking to see if they are the same.
-func binaryTreesEquivalent[T constraints.Ordered](a, b BinaryTree[T]) bool {
+// As an initial pass, we start with step by step walking to see if
+// they are the same.
+func BinaryTreesEquivalent[T constraints.Ordered](a, b BinaryTree[T]) bool {
 	// If both are nil, then they are equivalent.
 	if isTreeNil(a) == isTreeNil(b) && isTreeNil(a) {
 		return true
@@ -48,12 +50,12 @@ func binaryTreesEquivalent[T constraints.Ordered](a, b BinaryTree[T]) bool {
 	}
 }
 
-// binaryTreesEqual tests if two BinaryTrees have the same structure and values.
+// BinaryTreesEqual tests if two BinaryTrees have the same structure and values.
 //
 // TODO(rsned): Make this public method?
-func binaryTreesEqual[T constraints.Ordered](a, b BinaryTree[T]) bool {
+func BinaryTreesEqual[T constraints.Ordered](a, b BinaryTree[T]) bool {
 	// Test of they are equivalent first.
-	return binaryTreesEquivalent(a, b) && binaryTreeStructureEqual(a, b)
+	return BinaryTreesEquivalent(a, b) && binaryTreeStructureEqual(a, b)
 }
 
 func binaryTreeStructureEqual[T constraints.Ordered](a, b BinaryTree[T]) bool {
@@ -102,7 +104,6 @@ func traverseBinaryTreeStructure[T constraints.Ordered](tree BinaryTree[T], ch c
 		traverseBinaryTreeStructure(tree.Right(), ch)
 		ch <- "↑"
 	}
-
 }
 
 // isTreeNil checks if the tree generic instance the interface type is
@@ -120,5 +121,6 @@ func isTreeNil(a any) bool {
 	}
 	// Use reflection to check if the underlying value is nil
 	v := reflect.ValueOf(a)
+
 	return v.Kind() == reflect.Ptr && v.IsNil()
 }

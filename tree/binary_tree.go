@@ -2,7 +2,7 @@ package tree
 
 import "golang.org/x/exp/constraints"
 
-// BinaryTree is the simplest tree node type.
+// BinaryTree is the simplest tree type.
 //
 // A node value and two children (left and right).
 type BinaryTree[T constraints.Ordered] interface {
@@ -23,7 +23,7 @@ type BinaryTree[T constraints.Ordered] interface {
 	// Right returns the Right child, if any, of this node.
 	Right() BinaryTree[T]
 
-	// metadata returns a metadata string, if any, for this node in the tree.
+	// Metadata returns a metadata string, if any, for this node in the tree.
 	//
 	// Some examples include Balance Factor for an AVL tree, or Red/Black for a
 	// node in a Red-Black tree.
@@ -32,8 +32,8 @@ type BinaryTree[T constraints.Ordered] interface {
 	Metadata() string
 }
 
-// traverseBinaryTree is a recursive function that traverses a BinaryTree in the given
-// order emitting values to the given channel.
+// traverseBinaryTree is a recursive function that traverses a BinaryTree
+// in the given order emitting values to the given channel.
 //
 // It does NOT close the channel when it is finished.
 //
@@ -75,7 +75,7 @@ func traverseBinaryTree[T constraints.Ordered](tree BinaryTree[T], tOrder Traver
 			traverseBinaryTree(tree.Left(), tOrder, ch)
 		}
 	case TraverseLevelOrder:
-		//panic("Level Order traversal not implemented")
+		// panic("Level Order traversal not implemented")
 	default:
 		// TODO(rsned): There aren't other choices, so should this be
 		// an error or panic as well?

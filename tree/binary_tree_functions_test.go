@@ -21,20 +21,28 @@ func TestBinaryTreesEquivalentAndEqual(t *testing.T) {
 			wantEqual:      true,
 		},
 		{
-			a:              nil,
-			b:              (&BST[int]{}).Root(),
+			a: nil,
+			b: (&BST[int]{
+				root: nil,
+			}).Root(),
 			wantEquivalent: true,
 			wantEqual:      true,
 		},
 		{
-			a:              (&BST[int]{}).Root(),
+			a: (&BST[int]{
+				root: nil,
+			}).Root(),
 			b:              nil,
 			wantEquivalent: true,
 			wantEqual:      true,
 		},
 		{
-			a:              (&BST[int]{}).Root(),
-			b:              (&BST[int]{}).Root(),
+			a: (&BST[int]{
+				root: nil,
+			}).Root(),
+			b: (&BST[int]{
+				root: nil,
+			}).Root(),
 			wantEquivalent: true,
 			wantEqual:      true,
 		},
@@ -43,17 +51,25 @@ func TestBinaryTreesEquivalentAndEqual(t *testing.T) {
 			a: (&BST[int]{
 				root: &bstNode[int]{
 					value: 42,
+					left:  nil,
+					right: nil,
 				},
 			}).Root(),
-			b:              (&BST[int]{}).Root(),
+			b: (&BST[int]{
+				root: nil,
+			}).Root(),
 			wantEquivalent: false,
 			wantEqual:      false,
 		},
 		{
-			a: (&BST[int]{}).Root(),
+			a: (&BST[int]{
+				root: nil,
+			}).Root(),
 			b: (&BST[int]{
 				root: &bstNode[int]{
 					value: 42,
+					left:  nil,
+					right: nil,
 				},
 			}).Root(),
 			wantEquivalent: false,
@@ -63,11 +79,15 @@ func TestBinaryTreesEquivalentAndEqual(t *testing.T) {
 			a: (&BST[int]{
 				root: &bstNode[int]{
 					value: 42,
+					left:  nil,
+					right: nil,
 				},
 			}).Root(),
 			b: (&BST[int]{
 				root: &bstNode[int]{
 					value: 42,
+					left:  nil,
+					right: nil,
 				},
 			}).Root(),
 			wantEquivalent: true,
@@ -83,9 +103,13 @@ func TestBinaryTreesEquivalentAndEqual(t *testing.T) {
 					value: 21,
 					left: &bstNode[int]{
 						value: 1,
+						left:  nil,
+						right: nil,
 					},
 					right: &bstNode[int]{
 						value: 53,
+						left:  nil,
+						right: nil,
 					},
 				},
 			}).Root(),
@@ -97,7 +121,10 @@ func TestBinaryTreesEquivalentAndEqual(t *testing.T) {
 					value: 21,
 					left: &bstNode[int]{
 						value: 1,
+						left:  nil,
+						right: nil,
 					},
+					right: nil,
 				},
 			}).Root(),
 			wantEquivalent: false,
@@ -113,9 +140,13 @@ func TestBinaryTreesEquivalentAndEqual(t *testing.T) {
 					value: 21,
 					left: &bstNode[int]{
 						value: 1,
+						left:  nil,
+						right: nil,
 					},
 					right: &bstNode[int]{
 						value: 53,
+						left:  nil,
+						right: nil,
 					},
 				},
 			}).Root(),
@@ -127,9 +158,13 @@ func TestBinaryTreesEquivalentAndEqual(t *testing.T) {
 					value: 21,
 					left: &bstNode[int]{
 						value: 1,
+						left:  nil,
+						right: nil,
 					},
 					right: &bstNode[int]{
 						value: 42,
+						left:  nil,
+						right: nil,
 					},
 				},
 			}).Root(),
@@ -150,8 +185,12 @@ func TestBinaryTreesEquivalentAndEqual(t *testing.T) {
 						value: 21,
 						left: &bstNode[int]{
 							value: 1,
+							left:  nil,
+							right: nil,
 						},
+						right: nil,
 					},
+					right: nil,
 				},
 			}).Root(),
 			//   21
@@ -162,9 +201,13 @@ func TestBinaryTreesEquivalentAndEqual(t *testing.T) {
 					value: 21,
 					left: &bstNode[int]{
 						value: 1,
+						left:  nil,
+						right: nil,
 					},
 					right: &bstNode[int]{
 						value: 42,
+						left:  nil,
+						right: nil,
 					},
 				},
 			}).Root(),
@@ -176,11 +219,17 @@ func TestBinaryTreesEquivalentAndEqual(t *testing.T) {
 			a: (&BST[int]{
 				root: &bstNode[int]{
 					value: 42,
+					left:  nil,
+					right: nil,
 				},
 			}).Root(),
 			b: (&AVL[int]{
 				root: &avlNode[int]{
-					value: 42,
+					value:  42,
+					bf:     0,
+					parent: nil,
+					left:   nil,
+					right:  nil,
 				},
 			}).Root(),
 			wantEquivalent: true,
@@ -190,16 +239,26 @@ func TestBinaryTreesEquivalentAndEqual(t *testing.T) {
 			a: (&BST[int]{
 				root: &bstNode[int]{
 					value: 42,
+					left:  nil,
 					right: &bstNode[int]{
 						value: 53,
+						left:  nil,
+						right: nil,
 					},
 				},
 			}).Root(),
 			b: (&AVL[int]{
 				root: &avlNode[int]{
-					value: 42,
+					value:  42,
+					bf:     0,
+					parent: nil,
+					left:   nil,
 					right: &avlNode[int]{
-						value: 53,
+						value:  53,
+						bf:     0,
+						parent: nil,
+						left:   nil,
+						right:  nil,
 					},
 				},
 			}).Root(),
@@ -220,8 +279,12 @@ func TestBinaryTreesEquivalentAndEqual(t *testing.T) {
 						value: 21,
 						left: &bstNode[int]{
 							value: 1,
+							left:  nil,
+							right: nil,
 						},
+						right: nil,
 					},
+					right: nil,
 				},
 			}).Root(),
 			//   21
@@ -229,12 +292,22 @@ func TestBinaryTreesEquivalentAndEqual(t *testing.T) {
 			// 1   42
 			b: (&AVL[int]{
 				root: &avlNode[int]{
-					value: 21,
+					value:  21,
+					bf:     0,
+					parent: nil,
 					left: &avlNode[int]{
-						value: 1,
+						value:  1,
+						bf:     0,
+						parent: nil,
+						left:   nil,
+						right:  nil,
 					},
 					right: &avlNode[int]{
-						value: 42,
+						value:  42,
+						bf:     0,
+						parent: nil,
+						left:   nil,
+						right:  nil,
 					},
 				},
 			}).Root(),
@@ -244,11 +317,11 @@ func TestBinaryTreesEquivalentAndEqual(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		if got := binaryTreesEquivalent(test.a, test.b); got != test.wantEquivalent {
+		if got := BinaryTreesEquivalent(test.a, test.b); got != test.wantEquivalent {
 			t.Errorf("binaryTreesEquivalent(%v, %v) = %v, want %v",
 				test.a, test.b, got, test.wantEquivalent)
 		}
-		if got := binaryTreesEqual(test.a, test.b); got != test.wantEqual {
+		if got := BinaryTreesEqual(test.a, test.b); got != test.wantEqual {
 			t.Errorf("binaryTreesEqual(%v, %v) = %v, want %v",
 				test.a, test.b, got, test.wantEqual)
 		}
@@ -262,17 +335,23 @@ func TestBinaryTreeStructure(t *testing.T) {
 		want []string
 	}{
 		{
-			tree: &BST[int]{},
+			tree: &BST[int]{
+				root: nil,
+			},
 			vals: nil,
 			want: []string{},
 		},
 		{
-			tree: &BST[int]{},
+			tree: &BST[int]{
+				root: nil,
+			},
 			vals: []int{1},
 			want: []string{"V"},
 		},
 		{
-			tree: &BST[int]{},
+			tree: &BST[int]{
+				root: nil,
+			},
 			vals: []int{21, 1, 42},
 			want: []string{"↓L", "V", "↑", "V", "↓R", "V", "↑"},
 		},
@@ -290,9 +369,8 @@ func TestBinaryTreeStructure(t *testing.T) {
 			t.Errorf("binaryTreeStructure(%+v) = %+v, want %+v\ndiff: %+v",
 				test.tree, got, test.want, cmp.Diff(test.want, got))
 		}
-
 	}
 }
 
 // traverseBinaryTreeStructure isnt tested directly since its more of a change detector and
-// and it's tested by TestBinaryTreeStructure.
+// it's tested by TestBinaryTreeStructure.

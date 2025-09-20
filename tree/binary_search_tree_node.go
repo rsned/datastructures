@@ -15,6 +15,7 @@ func (t *bstNode[T]) HasLeft() bool {
 	if t == nil {
 		return false
 	}
+
 	return t.left != nil
 }
 
@@ -23,6 +24,7 @@ func (t *bstNode[T]) HasRight() bool {
 	if t == nil {
 		return false
 	}
+
 	return t.right != nil
 }
 
@@ -63,26 +65,39 @@ func (t *bstNode[T]) Insert(v T) bool {
 	// otherwise recurse!
 	if v < t.value {
 		if t.left == nil {
-			t.left = &bstNode[T]{value: v}
+			t.left = &bstNode[T]{
+				value: v,
+				left:  nil,
+				right: nil,
+			}
+
 			return true
 		}
+
 		return t.left.Insert(v)
 	}
 
 	if t.right == nil {
-		t.right = &bstNode[T]{value: v}
+		t.right = &bstNode[T]{
+			value: v,
+			left:  nil,
+			right: nil,
+		}
+
 		return true
 	}
+
 	return t.right.Insert(v)
 }
 
 // Delete the requested node from the tree and reports if it was successful.
 // If the value is not in the tree, the tree is unchanged and false is returned.
 // If the node is not a leaf the trees internal structure may be updated.
-func (t *bstNode[T]) Delete(v T) bool {
+func (t *bstNode[T]) Delete(_ T) bool {
 	if t == nil {
 		return false
 	}
+
 	return false
 }
 
@@ -98,6 +113,7 @@ func (t *bstNode[T]) Search(v T) bool {
 	if v < t.value {
 		return t.left.Search(v)
 	}
+
 	return t.right.Search(v)
 }
 
@@ -127,5 +143,6 @@ func (t *bstNode[T]) Height() int {
 	if lh > rh {
 		return lh + 1
 	}
+
 	return rh + 1
 }

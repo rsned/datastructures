@@ -10,7 +10,9 @@ type BST[T constraints.Ordered] struct {
 
 // NewBST returns an empty BST tree ready to use.
 func NewBST[T constraints.Ordered]() Tree[T] {
-	return &BST[T]{}
+	return &BST[T]{
+		root: nil,
+	}
 }
 
 // Root returns the root node of the tree.
@@ -24,9 +26,13 @@ func (t *BST[T]) Insert(v T) bool {
 	if t.root == nil {
 		t.root = &bstNode[T]{
 			value: v,
+			left:  nil,
+			right: nil,
 		}
+
 		return true
 	}
+
 	return t.root.Insert(v)
 }
 
@@ -37,6 +43,7 @@ func (t *BST[T]) Delete(v T) bool {
 	if t.root == nil {
 		return false
 	}
+
 	return t.root.Delete(v)
 }
 
@@ -45,6 +52,7 @@ func (t *BST[T]) Search(v T) bool {
 	if t.root == nil {
 		return false
 	}
+
 	return t.root.Search(v)
 }
 
@@ -66,5 +74,6 @@ func (t *BST[T]) Height() int {
 	if t.root == nil {
 		return 0
 	}
+
 	return t.root.Height()
 }

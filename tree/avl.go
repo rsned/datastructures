@@ -16,7 +16,9 @@ type AVL[T constraints.Ordered] struct {
 
 // NewAVL returns an empty AVL tree ready to use.
 func NewAVL[T constraints.Ordered]() Tree[T] {
-	return &AVL[T]{}
+	return &AVL[T]{
+		root: nil,
+	}
 }
 
 // Root returns the root node of the tree.
@@ -28,22 +30,31 @@ func (t *AVL[T]) Root() BinaryTree[T] {
 func (t *AVL[T]) Insert(v T) bool {
 	if t.root == nil {
 		t.root = &avlNode[T]{
-			value: v,
-			bf:    0,
-			left:  nil,
-			right: nil,
+			value:  v,
+			bf:     0,
+			parent: nil,
+			left:   nil,
+			right:  nil,
 		}
 
 		return true
 	}
 
-	return t.root.Insert(v)
+	success := t.root.Insert(v)
+	if success {
+		// After insertion, find the new root in case rotations changed it
+		for t.root.parent != nil {
+			t.root = t.root.parent
+		}
+	}
+
+	return success
 }
 
 // Delete the requested node from the tree and reports if it was successful.
 // If the value is not in the tree, the tree is unchanged and false is returned.
 // If the node is not a leaf the trees internal structure may be updated.
-func (t *AVL[T]) Delete(v T) bool {
+func (t *AVL[T]) Delete(_ T) bool {
 	return false
 }
 

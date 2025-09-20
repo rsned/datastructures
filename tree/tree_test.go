@@ -12,16 +12,17 @@ import (
 )
 
 var (
-	treeSizeUpperLimit = flag.Int("tree_size_upper_limit", 500000,
-		"What is the upper bound on how many values to insert when benchmarking. "+
-			"(Generally this would be used when you want to make sure new code "+
-			"is working by testing up to a smaller upper limit without waiting "+
-			"for a full run of benchmarks.)")
+	treeSizeUpperLimit = flag.Int("tree_size_upper_limit", limit,
+		"What is the upper bound on how many values to insert "+
+			"when benchmarking. (Generally this would be used when you "+
+			"want to make sure new code is working by testing up to "+
+			"smaller upper limit without waiting for a full run of"+
+			"benchmarks.)")
 
 	treeTypeFilter = flag.String("tree_type_filter", "",
-		"Flag to restrict benchmark runs to one type of tree. String should match "+
-			"the type name case-insensitively. e.g., avl or AvL or AVL would all "+
-			"be matched to the AVL tree type.")
+		"Flag to restrict benchmark runs to one type of tree. String "+
+			"should match the type name case-insensitively. e.g., avl or AvL"+
+			"or AVL would all be matched to the AVL tree type.")
 )
 
 // To cut out some of the timing variability of benchmark functions, pre-create
@@ -45,7 +46,7 @@ func init() {
 	testIntValsSorted = make([]int, limit)
 	testIntValsReverseSorted = make([]int, limit)
 
-	for i := 0; i < limit; i++ {
+	for i := range limit {
 		testIntVals[i] = rand.Int()
 	}
 
@@ -58,6 +59,8 @@ func init() {
 
 var (
 	// Define a series of increasing size amounts for benchmarking.
+	// TODO(rsned): Determine if more fine-grained steps give better
+	// results for quantifying performance.
 	insertSteps = []int{
 		1000,
 		5000,
@@ -78,13 +81,19 @@ type newTreeFunc[T constraints.Ordered] func() Tree[T]
 
 // newBSTTree creates a new BST.
 func newBSTTree[T constraints.Ordered]() Tree[int] {
-	return &BST[int]{}
+	return &BST[int]{
+		root: nil,
+	}
 }
 
 // newAVLTree creates a new AVL.
 func newAVLTree[T constraints.Ordered]() Tree[int] {
-	return &AVL[int]{}
+	return &AVL[int]{
+		root: nil,
+	}
 }
+
+// TODO(rsned): Add more types as they come.
 
 // To run the Tree Insert Benchmarks use this command with
 // the desired number of run repetitions:
@@ -101,12 +110,14 @@ func BenchmarkTreeInsert(b *testing.B) {
 		tree   newTreeFunc[int]
 	}{
 		{
-			name: "BST",
-			tree: newBSTTree[int],
+			name:   "BST",
+			sorted: false,
+			tree:   newBSTTree[int],
 		},
 		{
-			name: "AVL",
-			tree: newAVLTree[int],
+			name:   "AVL",
+			sorted: false,
+			tree:   newAVLTree[int],
 		},
 	}
 
@@ -124,7 +135,7 @@ func BenchmarkTreeInsert(b *testing.B) {
 			}
 			vals := testIntVals[:n]
 
-			b.Run(fmt.Sprintf("%s-%06d", example.name, n),
+			b.Run(fmt.Sprintf("%s-%07d", example.name, n),
 				func(b *testing.B) {
 					tree := example.tree()
 					for i := 0; i < b.N; i++ {

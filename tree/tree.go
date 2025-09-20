@@ -47,7 +47,7 @@ func (t TraverseOrder) String() string {
 type Traverser[T constraints.Ordered] interface {
 	// Traverse traverse the tree in the specified order emitting the values to
 	// the channel. Channel is closed once the final value is emitted.
-	Traverse(TraverseOrder) <-chan T
+	Traverse(order TraverseOrder) <-chan T
 }
 
 // Tree defines the basic interface common to all trees.
@@ -57,7 +57,8 @@ type Tree[T constraints.Ordered] interface {
 	Insert(v T) bool
 
 	// Delete the requested node from the tree and reports if it was successful.
-	// If the value is not in the tree, the tree is unchanged and false is returned.
+	// If the value is not in the tree, the tree is unchanged and false is
+	// returned.
 	//
 	// If the node is not a leaf the trees internal structure may be updated.
 	Delete(v T) bool

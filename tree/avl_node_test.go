@@ -7,7 +7,7 @@ import (
 )
 
 func TestAVLNodeBasics(t *testing.T) {
-	tree := &AVL[int]{}
+	tree := &AVL[int]{root: nil}
 	tree.Insert(21)
 	tree.Insert(33)
 	tree.Insert(1)
@@ -42,45 +42,104 @@ func TestAVLNodeBasics(t *testing.T) {
 func TestAVLNodeInsert(t *testing.T) {
 	// Tests are done with ints to prove the code does the right thing.
 	tests := []struct {
-		have    *avlNode[int]
+		have    *AVL[int]
 		val     int
-		want    *avlNode[int]
+		want    *AVL[int]
 		success bool
 	}{
 		{
-			// node is nil, should end up with a non-nil node.
-			have: nil,
+			// node is nil, Insert on nil node should return false
+			// since you can't modify a nil receiver
+			have: &AVL[int]{root: nil},
 			val:  11,
-			want: &avlNode[int]{
-				value: 11,
-				bf:    0,
+			want: &AVL[int]{
+				root: nil,
 			},
-			success: true,
+			success: false,
 		},
 		{
 			// duplicate value
-			have: &avlNode[int]{
-				value: 5,
-				bf:    0,
+			have: &AVL[int]{
+				root: &avlNode[int]{
+					value:  5,
+					bf:     0,
+					parent: nil,
+					left:   nil,
+					right:  nil,
+				},
 			},
 			val: 5,
-			want: &avlNode[int]{
-				value: 5,
-				bf:    0,
+			want: &AVL[int]{
+				root: &avlNode[int]{
+					value:  5,
+					bf:     0,
+					parent: nil,
+					left:   nil,
+					right:  nil,
+				},
 			},
 			success: false,
+		},
+		{
+			// right heavy node that inserting should force a re-balance.
+			have: func() *AVL[int] {
+				root := &avlNode[int]{
+					value:  5,
+					bf:     1,
+					parent: nil,
+					left:   nil,
+					right: &avlNode[int]{
+						value:  11,
+						bf:     0,
+						left:   nil,
+						right:  nil,
+						parent: nil, // will be set below
+					},
+				}
+				root.right.parent = root
+
+				return &AVL[int]{root: root}
+			}(),
+			val: 13,
+			want: func() *AVL[int] {
+				root := &avlNode[int]{
+					value:  11,
+					bf:     0,
+					parent: nil,
+					left: &avlNode[int]{
+						value:  5,
+						bf:     0,
+						left:   nil,
+						right:  nil,
+						parent: nil, // will be set below
+					},
+					right: &avlNode[int]{
+						value:  13,
+						bf:     0,
+						left:   nil,
+						right:  nil,
+						parent: nil, // will be set below
+					},
+				}
+				root.left.parent = root
+				root.right.parent = root
+
+				return &AVL[int]{root: root}
+			}(),
+			success: true,
 		},
 	}
 
 	for _, test := range tests {
-		if got := test.have.Insert(test.val); got != test.success {
+		tt := test.have.root
+		if got := tt.Insert(test.val); got != test.success {
 			t.Errorf("node.Insert(%v) = %v, want %v", test.val, got, test.success)
 		}
 
-		if !binaryTreesEqual(test.have, test.want) {
-			// TODO(rsned): Use dump_binary_tree here to get the two
-			// trees to show.
-			t.Errorf("value was inserted, but resulting tree was not correct.")
+		if !BinaryTreesEqual(tt, test.want.root) {
+			t.Errorf("value was inserted, but resulting tree was not correct.\ngot:\n%s\nwant:\n%s\n", PrintBinaryTreeASCII("got", tt), PrintBinaryTreeASCII("want", test.want.root))
+			t.Errorf("have: %+v\n\n", test.have.Root())
+			t.Errorf("have: %+v\n\n", tt)
 		}
 	}
 }
@@ -93,10 +152,18 @@ func TestAVLNodeDelete(t *testing.T) {
 	}{
 		{
 			tree: nil,
+			val:  0,
 			want: false,
 		},
 		{
-			tree: &avlNode[int]{},
+			tree: &avlNode[int]{
+				value:  0,
+				bf:     0,
+				parent: nil,
+				left:   nil,
+				right:  nil,
+			},
+			val:  0,
 			want: false,
 		},
 	}
@@ -165,19 +232,22 @@ func TestAVLNodeTraverse(t *testing.T) {
 		bf:     -1,
 		parent: nil,
 		left: &avlNode[int]{
-			value: 1,
-			bf:    0,
+			value:  1,
+			bf:     0,
+			parent: nil,
 			left: &avlNode[int]{
-				value: -13,
-				bf:    0,
-				left:  nil,
-				right: nil,
+				value:  -13,
+				bf:     0,
+				parent: nil,
+				left:   nil,
+				right:  nil,
 			},
 			right: &avlNode[int]{
-				value: 11,
-				bf:    0,
-				left:  nil,
-				right: nil,
+				value:  11,
+				bf:     0,
+				parent: nil,
+				left:   nil,
+				right:  nil,
 			},
 		},
 		right: nil,

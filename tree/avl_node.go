@@ -52,7 +52,7 @@ func (t *avlNode[T]) Value() T {
 // Metadata returns a string of metadata about this node.
 // For AVL tree, this is the balance factor of the node.
 func (t *avlNode[T]) Metadata() string {
-	return fmt.Sprintf("BF:%2d", t.bf)
+	return fmt.Sprintf("(%d)", t.bf)
 }
 
 // balanceFactor returns the nodes balance factor.
@@ -69,14 +69,7 @@ func (t *avlNode[T]) balanceFactor() int {
 // if the operation was successful.
 func (t *avlNode[T]) Insert(v T) bool {
 	if t == nil {
-		t = &avlNode[T]{
-			value: v,
-			bf:    0,
-			left:  nil,
-			right: nil,
-		}
-
-		return true
+		return false
 	}
 
 	// Inserting a duplicate value is an error.
@@ -137,8 +130,8 @@ func (t *avlNode[T]) Insert(v T) bool {
 					// Right-Left Case
 					// Double rotation: Right(Z) then Left(X)
 					rotateRightLeft(x)
-				} else if x.right.bf > 0 {
-					// Right-Right Case
+				} else {
+					// Right-Right Case (includes bf >= 0)
 					// Single rotation Left(X)
 					rotateLeft(x)
 				}
@@ -150,8 +143,8 @@ func (t *avlNode[T]) Insert(v T) bool {
 					// Left-Right Case
 					// Double rotation: Left(Z) then Right(X)
 					rotateLeftRight(x)
-				} else if x.left.bf < 0 {
-					// Left-Left Case
+				} else {
+					// Left-Left Case (includes bf <= 0)
 					// Single rotation Right
 					rotateRight(x)
 				}
@@ -163,18 +156,9 @@ func (t *avlNode[T]) Insert(v T) bool {
 }
 
 func updateBalanceFactors[T constraints.Ordered](node *avlNode[T]) {
-	const limit = 4
-
-	var i int
-
 	// Update the balance factor back up from here after adding the new node.
 	for x := node; x != nil; x = x.parent {
 		x.bf = x.balanceFactor()
-		i++
-
-		if i > limit {
-			break
-		}
 	}
 }
 
@@ -202,8 +186,8 @@ func updateBalanceFactors[T constraints.Ordered](node *avlNode[T]) {
 // And now the tree has regained balance.
 //
 // Alternatively, this could be part of a double rotation in which case there is
-// no grandchild node to handle, we are only shifting the node and its child into
-// a form that rotateRight will then handle.
+// no grandchild node to handle, we are only shifting the node and its child
+// into a form that rotateRight will then handle.
 //
 //	       parent
 //	         /
@@ -454,8 +438,9 @@ func rotateRight[T constraints.Ordered](node *avlNode[T]) *avlNode[T] {
 	return node
 }
 
-// rotateRightLeft performs a double rotation, first right around the middle node
-// to transform it into the standard form for the follow up rotateLeft.
+// rotateRightLeft performs a double rotation, first right around the
+// middle node to transform it into the standard form for the follow up
+// rotateLeft.
 //
 //	 \
 //	[ H ] (+2)
@@ -499,7 +484,7 @@ func rotateLeftRight[T constraints.Ordered](node *avlNode[T]) *avlNode[T] {
 // Delete the requested node from the tree and reports if it was successful.
 // If the value is not in the tree, the tree is unchanged and false is returned.
 // If the node is not a leaf the trees internal structure may be updated.
-func (t *avlNode[T]) Delete(v T) bool {
+func (t *avlNode[T]) Delete(_ T) bool {
 	if t == nil {
 		return false
 	}
@@ -571,8 +556,8 @@ func (t *avlNode[T]) toTestString(buf *bytes.Buffer, indent int) {
 	// at the necessary level for proper indenting of node text.
 	const testIndents = "\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t"
 
-	buf.WriteString(fmt.Sprintf("%svalue: %v,\n", testIndents[:indent], t.value))
-	buf.WriteString(fmt.Sprintf("%sbf: %d,\n", testIndents[:indent], t.bf))
+	fmt.Fprintf(buf, "%svalue: %v,\n", testIndents[:indent], t.value)
+	fmt.Fprintf(buf, "%sbf: %d,\n", testIndents[:indent], t.bf)
 
 	if t.left != nil {
 		buf.WriteString(testIndents[:indent] + "left: &avlNode[T]{\n")

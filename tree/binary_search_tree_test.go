@@ -17,12 +17,14 @@ func TestBSTInsert(t *testing.T) {
 		wantStructure *BST[int]
 	}{
 		{
-			tree: &BST[int]{},
+			tree: &BST[int]{root: nil},
 			val:  5,
 			want: true,
 			wantStructure: &BST[int]{
 				root: &bstNode[int]{
 					value: 5,
+					left:  nil,
+					right: nil,
 				},
 			},
 		},
@@ -31,6 +33,8 @@ func TestBSTInsert(t *testing.T) {
 			tree: &BST[int]{
 				root: &bstNode[int]{
 					value: 42,
+					left:  nil,
+					right: nil,
 				},
 			},
 			val:  5,
@@ -40,7 +44,10 @@ func TestBSTInsert(t *testing.T) {
 					value: 42,
 					left: &bstNode[int]{
 						value: 5,
+						left:  nil,
+						right: nil,
 					},
+					right: nil,
 				},
 			},
 		},
@@ -49,6 +56,8 @@ func TestBSTInsert(t *testing.T) {
 			tree: &BST[int]{
 				root: &bstNode[int]{
 					value: 42,
+					left:  nil,
+					right: nil,
 				},
 			},
 			val:  53,
@@ -56,8 +65,11 @@ func TestBSTInsert(t *testing.T) {
 			wantStructure: &BST[int]{
 				root: &bstNode[int]{
 					value: 42,
+					left:  nil,
 					right: &bstNode[int]{
 						value: 53,
+						left:  nil,
+						right: nil,
 					},
 				},
 			},
@@ -67,6 +79,8 @@ func TestBSTInsert(t *testing.T) {
 			tree: &BST[int]{
 				root: &bstNode[int]{
 					value: 42,
+					left:  nil,
+					right: nil,
 				},
 			},
 			val:  42,
@@ -74,6 +88,8 @@ func TestBSTInsert(t *testing.T) {
 			wantStructure: &BST[int]{
 				root: &bstNode[int]{
 					value: 42,
+					left:  nil,
+					right: nil,
 				},
 			},
 		},
@@ -84,8 +100,10 @@ func TestBSTInsert(t *testing.T) {
 			t.Errorf("Insert(%v) = %v, want %v", test.val, got, test.want)
 		}
 
-		if !Equal(test.tree.Root(), test.wantStructure.Root()) {
-			t.Errorf("value was inserted but the resulting tree was not as expected.")
+		if !BinaryTreesEqual(test.tree.Root(), test.wantStructure.Root()) {
+			t.Errorf("value was inserted but the resulting tree was not as expected.\ngot:\n%s\nwant:\n%s\n",
+				PrintBinaryTreeASCII("got", test.tree.root),
+				PrintBinaryTreeASCII("want", test.wantStructure.root))
 		}
 	}
 }
@@ -99,6 +117,7 @@ func TestBSTDelete(t *testing.T) {
 		{
 			// tree has no root node to start with.
 			tree: NewBST[int](),
+			val:  0,
 			want: false,
 		},
 		{
@@ -143,6 +162,8 @@ func TestBSTSearch(t *testing.T) {
 			tree: &BST[int]{
 				root: &bstNode[int]{
 					value: 42,
+					left:  nil,
+					right: nil,
 				},
 			},
 			val:  5,
@@ -156,19 +177,27 @@ func TestBSTSearch(t *testing.T) {
 						value: 21,
 						left: &bstNode[int]{
 							value: 1,
+							left:  nil,
+							right: nil,
 						},
 						right: &bstNode[int]{
 							value: 30,
 							left: &bstNode[int]{
 								value: 29,
+								left:  nil,
+								right: nil,
 							},
+							right: nil,
 						},
 					},
 					right: &bstNode[int]{
 						value: 84,
 						left: &bstNode[int]{
 							value: 57,
+							left:  nil,
+							right: nil,
 						},
+						right: nil,
 					},
 				},
 			},
@@ -182,7 +211,6 @@ func TestBSTSearch(t *testing.T) {
 			t.Errorf("Search(%v) = %v, want %v", test.val, got, test.want)
 		}
 	}
-
 }
 
 func TestBSTHeight(t *testing.T) {
@@ -198,6 +226,8 @@ func TestBSTHeight(t *testing.T) {
 			tree: &BST[int]{
 				root: &bstNode[int]{
 					value: 42,
+					left:  nil,
+					right: nil,
 				},
 			},
 			want: 1,
@@ -210,19 +240,27 @@ func TestBSTHeight(t *testing.T) {
 						value: 21,
 						left: &bstNode[int]{
 							value: 1,
+							left:  nil,
+							right: nil,
 						},
 						right: &bstNode[int]{
 							value: 30,
 							left: &bstNode[int]{
 								value: 29,
+								left:  nil,
+								right: nil,
 							},
+							right: nil,
 						},
 					},
 					right: &bstNode[int]{
 						value: 84,
 						left: &bstNode[int]{
 							value: 57,
+							left:  nil,
+							right: nil,
 						},
+						right: nil,
 					},
 				},
 			},
@@ -245,19 +283,27 @@ func TestBSTTraverse(t *testing.T) {
 				value: 21,
 				left: &bstNode[int]{
 					value: 1,
+					left:  nil,
+					right: nil,
 				},
 				right: &bstNode[int]{
 					value: 30,
 					left: &bstNode[int]{
 						value: 29,
+						left:  nil,
+						right: nil,
 					},
+					right: nil,
 				},
 			},
 			right: &bstNode[int]{
 				value: 84,
 				left: &bstNode[int]{
 					value: 57,
+					left:  nil,
+					right: nil,
 				},
+				right: nil,
 			},
 		},
 	}

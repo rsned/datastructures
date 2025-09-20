@@ -9,7 +9,9 @@ type RedBlack[T constraints.Ordered] struct {
 
 // NewRedBlack returns an empty Red-Black tree ready to use.
 func NewRedBlack[T constraints.Ordered]() Tree[T] {
-	return &RedBlack[T]{}
+	return &RedBlack[T]{
+		root: nil,
+	}
 }
 
 // Root returns the root node of the tree.
@@ -22,9 +24,14 @@ func (t *RedBlack[T]) Insert(v T) bool {
 	if t.root == nil {
 		t.root = &redBlackNode[T]{
 			value: v,
+			isRed: false,
+			left:  nil,
+			right: nil,
 		}
+
 		return true
 	}
+
 	return t.root.Insert(v)
 }
 
@@ -36,6 +43,7 @@ func (t *RedBlack[T]) Delete(v T) bool {
 	if t.root == nil {
 		return false
 	}
+
 	return t.root.Delete(v)
 }
 
@@ -50,7 +58,7 @@ func (t *RedBlack[T]) Search(v T) bool {
 
 // Traverse traverse the tree in the specified order emitting the values to
 // the channel. Channel is closed once the final value is emitted.
-func (t *RedBlack[T]) Traverse(w TraverseOrder) <-chan T {
+func (t *RedBlack[T]) Traverse(_ TraverseOrder) <-chan T {
 	return make(chan T)
 }
 
@@ -60,5 +68,6 @@ func (t *RedBlack[T]) Height() int {
 	if t.root == nil {
 		return 0
 	}
+
 	return t.root.Height()
 }
