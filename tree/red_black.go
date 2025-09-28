@@ -71,3 +71,19 @@ func (t *RedBlack[T]) Height() int {
 
 	return t.root.Height()
 }
+
+// Clone creates a deep copy of the Red-Black tree.
+func (t *RedBlack[T]) Clone() Tree[T] {
+	if t == nil || t.root == nil {
+		return NewRedBlack[T]()
+	}
+
+	clone := &RedBlack[T]{
+		root: nil,
+	}
+	if clonedRoot, ok := t.root.Clone().(*redBlackNode[T]); ok {
+		clone.root = clonedRoot
+	}
+
+	return clone
+}

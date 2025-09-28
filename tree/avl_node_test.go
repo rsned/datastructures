@@ -48,14 +48,19 @@ func TestAVLNodeInsert(t *testing.T) {
 		success bool
 	}{
 		{
-			// node is nil, Insert on nil node should return false
-			// since you can't modify a nil receiver
+			// Insert into empty tree should create root node
 			have: &AVL[int]{root: nil},
 			val:  11,
 			want: &AVL[int]{
-				root: nil,
+				root: &avlNode[int]{
+					value:  11,
+					bf:     0,
+					parent: nil,
+					left:   nil,
+					right:  nil,
+				},
 			},
-			success: false,
+			success: true,
 		},
 		{
 			// duplicate value
@@ -131,15 +136,15 @@ func TestAVLNodeInsert(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		tt := test.have.root
-		if got := tt.Insert(test.val); got != test.success {
-			t.Errorf("node.Insert(%v) = %v, want %v", test.val, got, test.success)
+		// Use tree-level insertion instead of node-level to handle root changes
+		if got := test.have.Insert(test.val); got != test.success {
+			t.Errorf("tree.Insert(%v) = %v, want %v", test.val, got, test.success)
 		}
 
-		if !BinaryTreesEqual(tt, test.want.root) {
-			t.Errorf("value was inserted, but resulting tree was not correct.\ngot:\n%s\nwant:\n%s\n", PrintBinaryTreeASCII("got", tt), PrintBinaryTreeASCII("want", test.want.root))
+		if !BinaryTreesEqual(test.have.root, test.want.root) {
+			t.Errorf("value was inserted, but resulting tree was not correct.\ngot:\n%s\nwant:\n%s\n", PrintBinaryTreeASCII("got", test.have.root), PrintBinaryTreeASCII("want", test.want.root))
 			t.Errorf("have: %+v\n\n", test.have.Root())
-			t.Errorf("have: %+v\n\n", tt)
+			t.Errorf("want: %+v\n\n", test.want.Root())
 		}
 	}
 }

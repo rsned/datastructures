@@ -38,24 +38,20 @@ func FloatingPointTolerance(tol float64) OptionFunc {
 	}
 }
 
-// Clone returns a complete new copy of the given tree.
-func Clone[T constraints.Ordered](t Tree[T]) Tree[T] {
-	// TODO(rsned): Implement this.
-	return t
-}
-
 // Join attempts to merge the given trees following the given options (if any).
+// If the joining was unsuccessful for any reason, the resulting Tree should
+// not be used, and false will be returned.
 //
 // Options can include things like what strategy to use when encountering
 // duplicate values, hints or requirements on type of output tree, etc.
-func Join[T constraints.Ordered](a, _ Tree[T], opts ...OptionFunc) Tree[T] {
+func Join[T constraints.Ordered](a, _ Tree[T], opts ...OptionFunc) (Tree[T], bool) {
 	treeOpts := defaultOptions()
 	for _, opt := range opts {
 		opt(treeOpts)
 	}
 
 	// TODO(rsned): Implement this.
-	return a
+	return a, false
 }
 
 // Split splits the Tree into two trees such that first tree returned constains
@@ -75,14 +71,17 @@ func Split[T constraints.Ordered](t Tree[T], _ T) (Tree[T], Tree[T]) {
 }
 
 // Prune removes the whole subtree that is homed at val.
+//
+// Your right to be foolish is supported. For example pruning on the root
+// value will give back an empty tree.
 func Prune[T constraints.Ordered](t Tree[T], _ T) Tree[T] {
 	// TODO(rsned): Implement this.
 	return t
 }
 
-// Rebalance attempts to perform some rebalancing on a tree.
+// Rebalance attempts to perform some after-market rebalancing on a tree.
 //
-// Not all types need after-market balancing, so those types may
+// For types that normally include some type of balancing, they may
 // short-circuit this call.
 func Rebalance[T constraints.Ordered](t Tree[T], _ T) Tree[T] {
 	// TODO(rsned): Implement this.
@@ -167,7 +166,23 @@ func Equal[T constraints.Ordered](a, b Tree[T], opts ...OptionFunc) bool {
 // traversal outputs, but not caring about the underlying structure or
 // implementation.
 //
-// See the description for Equal for examples of this.
+// See the description for Equal for some examples of this.
+//
+// e.g., Tree A, a BST:
+//
+//		    8
+//	       / \
+//		  5  15
+//	     /  /  \
+//	    2  13  17
+//
+// and Tree B, a B-Tree
+//
+//		      13
+//	         /  \
+//		2|5|8    15|17
+//
+// are equivalent because they have the same node values in the same order.
 //
 // This function supports changing the tolerance for floating point comparisons.
 func Equivalent[T constraints.Ordered](a, b Tree[T], opts ...OptionFunc) bool {

@@ -28,27 +28,14 @@ func (t *AVL[T]) Root() BinaryTree[T] {
 
 // Insert inserts the node into the tree, growing as needed.
 func (t *AVL[T]) Insert(v T) bool {
-	if t.root == nil {
-		t.root = &avlNode[T]{
-			value:  v,
-			bf:     0,
-			parent: nil,
-			left:   nil,
-			right:  nil,
-		}
-
-		return true
+	var inserted bool
+	t.root, inserted = t.root.insertInternal(v)
+	// Ensure root has no parent
+	if t.root != nil {
+		t.root.parent = nil
 	}
 
-	success := t.root.Insert(v)
-	if success {
-		// After insertion, find the new root in case rotations changed it
-		for t.root.parent != nil {
-			t.root = t.root.parent
-		}
-	}
-
-	return success
+	return inserted
 }
 
 // Delete the requested node from the tree and reports if it was successful.
@@ -87,6 +74,22 @@ func (t *AVL[T]) Height() int {
 	}
 
 	return t.root.Height()
+}
+
+// Clone creates a deep copy of the AVL tree.
+func (t *AVL[T]) Clone() Tree[T] {
+	if t == nil || t.root == nil {
+		return NewAVL[T]()
+	}
+
+	clone := &AVL[T]{
+		root: nil,
+	}
+	if clonedRoot, ok := t.root.Clone().(*avlNode[T]); ok {
+		clone.root = clonedRoot
+	}
+
+	return clone
 }
 
 // toTestString prints out this tree with all its properties and children

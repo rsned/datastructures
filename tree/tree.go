@@ -57,8 +57,8 @@ type Tree[T constraints.Ordered] interface {
 	Insert(v T) bool
 
 	// Delete the requested node from the tree and reports if it was successful.
-	// If the value is not in the tree, the tree is unchanged and false is
-	// returned.
+	// If the value is not in the tree, the tree is unchanged and false
+	// is returned.
 	//
 	// If the node is not a leaf the trees internal structure may be updated.
 	Delete(v T) bool
@@ -69,6 +69,9 @@ type Tree[T constraints.Ordered] interface {
 	// Height returns the height of the longest path in the tree from the
 	// root node to the farthest leaf.
 	Height() int
+
+	// Clone creates a deep copy of the tree and returns it.
+	Clone() Tree[T]
 
 	Traverser[T]
 }

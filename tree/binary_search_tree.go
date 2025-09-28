@@ -44,7 +44,13 @@ func (t *BST[T]) Delete(v T) bool {
 		return false
 	}
 
-	return t.root.Delete(v)
+	// Because Delete is part of the base Tree interface, it does not specify
+	// a generic way to return a potential changed root node of the tree, so
+	// the deleteInternal handles that specific change.
+	var deleted bool
+	t.root, deleted = t.root.deleteInternal(v)
+
+	return deleted
 }
 
 // Search reports if the given value is in the tree.
@@ -76,4 +82,20 @@ func (t *BST[T]) Height() int {
 	}
 
 	return t.root.Height()
+}
+
+// Clone creates a deep copy of the BST tree.
+func (t *BST[T]) Clone() Tree[T] {
+	if t == nil || t.root == nil {
+		return NewBST[T]()
+	}
+
+	clone := &BST[T]{
+		root: nil,
+	}
+	if clonedRoot, ok := t.root.Clone().(*bstNode[T]); ok {
+		clone.root = clonedRoot
+	}
+
+	return clone
 }

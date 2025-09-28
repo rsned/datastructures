@@ -201,7 +201,7 @@ func RenderBinaryTree[T constraints.Ordered](t BinaryTree[T], _ int, mode Render
 
 func indentOptsForNodeWidth(width int) indentOptionsMap {
 	// TODO(rsned): Add check for maxSupportedWidth to prevent crashes.
-	return binaryTreeSpacingData[width-(width+1)%2]
+	return binaryTreeSpacingData[width+(width+1)%2]
 }
 
 // generateLevelsNodes returns a potentially sparse slice of Nodes at the

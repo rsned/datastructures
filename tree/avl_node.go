@@ -11,8 +11,8 @@ import (
 type avlNode[T constraints.Ordered] struct {
 	value T
 
-	// bf is the balance factor, the height difference of the nodes two subtrees.
-	// Could probably be an int8 since its always in the range [-2, +2]
+	// bf is the balance factor, the height difference of the nodes
+	// two subtrees.
 	bf int
 
 	// parent is a pointer back to the parent node to allow for updates
@@ -65,107 +65,92 @@ func (t *avlNode[T]) balanceFactor() int {
 	return t.right.Height() - t.left.Height()
 }
 
+// insertInternal performs AVL insertion with proper rebalancing
+// and returns the potential new root.
+func (t *avlNode[T]) insertInternal(v T) (*avlNode[T], bool) {
+	if t == nil {
+		// Create new node
+		newNode := &avlNode[T]{
+			value:  v,
+			bf:     0,
+			parent: nil,
+			left:   nil,
+			right:  nil,
+		}
+
+		return newNode, true
+	}
+
+	// Inserting a duplicate value is an error
+	if v == t.value {
+		return t, false
+	}
+
+	var inserted bool
+	// If we need to go farther left, recurse!
+	if v < t.value {
+		t.left, inserted = t.left.insertInternal(v)
+		if t.left != nil {
+			t.left.parent = t
+		}
+	} else {
+		// If we need to go farther right, recurse!
+		t.right, inserted = t.right.insertInternal(v)
+		if t.right != nil {
+			t.right.parent = t
+		}
+	}
+
+	if !inserted {
+		return t, false
+	}
+
+	// Update balance factor
+	t.bf = t.balanceFactor()
+
+	// Now we need to check for imbalance and apply updates as needed.
+
+	if t.bf > 1 { // The node is right-heavy
+		// Check if it's Right-Right or Right-Left
+		if t.right != nil && t.right.bf < 0 {
+			// Right-Left case
+			// Double rotation: Right(Z) then Left(X)
+			return rotateRightLeft(t), true
+		}
+		// Right-Right case
+		return rotateLeft(t), true
+	} else if t.bf < -1 { // Left-heavy
+		// Check if it's Left-Right or Left-Left
+		if t.left != nil && t.left.bf > 0 {
+			// Left-Right case
+			// Double rotation: Left(Z) then Right(X)
+			return rotateLeftRight(t), true
+		}
+		// Left-Left case
+		// Single rotation: Right(X)
+		return rotateRight(t), true
+	}
+
+	return t, true
+}
+
 // Insert inserts the node into the tree, growing as needed, and reports
 // if the operation was successful.
+// NOTE: This method doesn't handle root changes.
+// For proper AVL insertion that can change the root, use AVL.Insert() instead.
 func (t *avlNode[T]) Insert(v T) bool {
 	if t == nil {
 		return false
 	}
 
-	// Inserting a duplicate value is an error.
-	if v == t.value {
-		return false
-	}
+	_, inserted := t.insertInternal(v)
 
-	// If we need to go farther left, recurse!
-	if v < t.value && t.left != nil {
-		return t.left.Insert(v)
-	}
-
-	// If we need to go farther right, recurse!
-	if v > t.value && t.right != nil {
-		return t.right.Insert(v)
-	}
-
-	// We are at the end of the line going left, we need to add
-	// a new node to the left, updating balancing factors.
-	if v < t.value {
-		t.left = &avlNode[T]{
-			parent: t,
-			value:  v,
-			bf:     0,
-			left:   nil,
-			right:  nil,
-		}
-	} else {
-		// Or we need to add a new node to the right.
-		t.right = &avlNode[T]{
-			parent: t,
-			value:  v,
-			bf:     0,
-			left:   nil,
-			right:  nil,
-		}
-	}
-
-	// Update the balance factor back up from here after adding the new node.
-	updateBalanceFactors(t)
-
-	// Now we need to check for imbalance and apply updates as needed.
-
-	// We are in a leaf node, or a node with only the new child, so this node
-	// is not the one that needs a rebalance. Start working our way up the tree
-	// looking for a node that is far enough out of balance.
-	for x := t; x != nil; x = x.parent {
-		// If this next level is balanced enough, move up and try again.
-		// We will either get to the root or find a strong imbalance.
-		if x.bf >= -1 && x.bf <= 1 {
-			continue
-		}
-
-		if x.bf > 1 { // The node is right-heavy
-			if x.right != nil {
-				// Check if it's Right-Right or Right-Left
-				if x.right.bf < 0 {
-					// Right-Left Case
-					// Double rotation: Right(Z) then Left(X)
-					rotateRightLeft(x)
-				} else {
-					// Right-Right Case (includes bf >= 0)
-					// Single rotation Left(X)
-					rotateLeft(x)
-				}
-			}
-		} else if x.bf < -1 {
-			if x.left != nil {
-				// Check if it's Left-Right or Left-Left
-				if x.left.bf > 0 {
-					// Left-Right Case
-					// Double rotation: Left(Z) then Right(X)
-					rotateLeftRight(x)
-				} else {
-					// Left-Left Case (includes bf <= 0)
-					// Single rotation Right
-					rotateRight(x)
-				}
-			}
-		}
-	}
-
-	return true
+	return inserted
 }
 
-func updateBalanceFactors[T constraints.Ordered](node *avlNode[T]) {
-	// Update the balance factor back up from here after adding the new node.
-	for x := node; x != nil; x = x.parent {
-		x.bf = x.balanceFactor()
-	}
-}
-
-// rotateLeft takes a node in the tree and rotates left through the middle
-// node to balance it.
+// rotateLeft performs a left rotation around the given node.
 //
-// THe most common form is:
+// There are three common forms of transformation:
 //
 //	parent
 //	   \
@@ -183,11 +168,9 @@ func updateBalanceFactors[T constraints.Ordered](node *avlNode[T]) {
 //	      / \
 //	(0) [H] [Z] (0)
 //
-// And now the tree has regained balance.
-//
-// Alternatively, this could be part of a double rotation in which case there is
-// no grandchild node to handle, we are only shifting the node and its child
-// into a form that rotateRight will then handle.
+// Alternatively, this could be part of a double rotation where we
+// are only shifting the node and its child into a form that rotateRight
+// will then handle.
 //
 //	       parent
 //	         /
@@ -207,103 +190,56 @@ func updateBalanceFactors[T constraints.Ordered](node *avlNode[T]) {
 //	      /
 //	(0) [A]
 //
-// And now the tree is ready for the rotateRight to finish the balancing.
-//
-// The third form is a rotate left with children:
+// And finally rotate left with children
 //
 //	       parent
 //	         /
-//	       [H] (+1)   <-- node
+//	       [H] (+2)
 //	      /   \
-//	(0) [E]   [M] (+2)
+//	(0) [E]   [M] (+1)
 //	          / \
-//	    (0) [J] [S] (+1)
-//	              \
-//	              [Z] (0)
+//	    (0) [J] [S] (0)
 //
 // Which becomes:
 //
 //	       parent
 //	          \
-//	          [M] (0)   <-- node
+//	          [M] (0)
 //	         /   \
-//	  (0) [H]     [S] (+1)
-//	      / \        \
-//	(0) [E] [J] (0)   [Z] (0)
+//	  (0) [H]     [S] (0)
+//	      / \
+//	(0) [E] [J] (0)
 //
 // And once again balance is restored.
 func rotateLeft[T constraints.Ordered](node *avlNode[T]) *avlNode[T] {
-	// node is the node with a balance factor >= 2
-	// Save its two children and its right childs two children.
-	childL := node.left
-	childR := node.right
-	grandchildL := childR.left
-	grandchildR := childR.right
-
-	// parent
-	//   \
-	//   [H]  <-- node
-	//     \
-	//     [N]
-	//       \
-	//       [Z]
-	//
-
-	// Move N to H's left child.
-	// Move Z up to H's right spot and update its parent to H.
-	//
-	// parent
-	//   \
-	//   [H]
-	//   / \
-	// [N] [Z]
-	//
-	node.left = childR
-	node.right = grandchildR
-
-	// If this was a full rotate (and not the first part of a rotate left then right)
-	// then there would be a grandchild node that would need its parent set.
-	if node.right != nil {
-		node.right.parent = node
+	if node == nil || node.right == nil {
+		return node
 	}
 
-	// If the right child had a left grandchild tree, it jumps over to become
-	// the new left childs left node.
-	node.left.left = grandchildL
-	if node.left.left != nil {
-		node.left.left.parent = node.left
+	// Save references
+	newRoot := node.right
+	subtree := newRoot.left
+
+	// Perform rotation
+	newRoot.left = node
+	node.right = subtree
+
+	// Update parent pointers
+	newRoot.parent = node.parent
+	node.parent = newRoot
+	if subtree != nil {
+		subtree.parent = node
 	}
 
-	// If there was an existing left child it becomes the left nodes right grandchild.
-	node.left.right = childL
-	if node.left.right != nil {
-		node.left.right.parent = node.left
-	}
-
-	// Swap H & N's values
-	//
-	//  parent
-	//    \
-	//    [N]
-	//    / \
-	//  [H] [Z]
-	//
-	node.value, childR.value = childR.value, node.value
-
-	// Update the affected nodes balance factors and up the tree.
-	updateBalanceFactors(node.left)
-	// For the other child node, only need to update it by itself.
-	// updateBalanceFactors handles the main node and on up.
-	if node.right != nil {
-		node.right.bf = node.right.balanceFactor()
-	}
+	// Update balance factors after rotation
+	node.bf = node.balanceFactor()
+	newRoot.bf = newRoot.balanceFactor()
 
 	// Return new root of rotated subtree
-	return node
+	return newRoot
 }
 
-// rotateRight takes a set of nodes and rotates right through the middle
-// node to balance it.
+// rotateRight performs a right rotation around the given node.
 //
 // The most common form is:
 //
@@ -324,7 +260,8 @@ func rotateLeft[T constraints.Ordered](node *avlNode[T]) *avlNode[T] {
 //	(0) [A] [E] (0)
 //
 // Alternatively, this could be part of a double rotation in which case there is
-// no grandchild node to handle, we are only shifting shuffling the node and its child.
+// no grandchild node to handle, we are only shifting shuffling the node and
+// its child.
 //
 //	parent
 //	   \
@@ -370,115 +307,87 @@ func rotateLeft[T constraints.Ordered](node *avlNode[T]) *avlNode[T] {
 //
 // And once again balance is restored.
 func rotateRight[T constraints.Ordered](node *avlNode[T]) *avlNode[T] {
-	// Save its two children and its left childs two children.
-	childL := node.left
-	childR := node.right
-	grandchildL := childL.left
-	grandchildR := childL.right
+	if node == nil || node.left == nil {
+		return node
+	}
 
-	// From our starting point:
-	//
-	//       parent
-	//        /
-	//      [E]  (<--node)
-	//      /
-	//    [C]
-	//    /
-	//  [A]
-	//
-	// Move left child to node's right.
-	// Move left grandchild up to left child and update its parent to node..
-	//
-	//   parent
-	//     \
-	//     [E]
-	//     / \
-	//   [A] [C]
-	//
-	node.left = grandchildL
-	node.right = childL
-	// If this was a full rotate (and not the first part of a rotate right then left)
-	// then there would be a grandchild node that would need its parent set.
+	// Save references
+	newRoot := node.left
+	subtree := newRoot.right
+
+	// Perform rotation
+	newRoot.right = node
+	node.left = subtree
+
+	// Update parent pointers
+	newRoot.parent = node.parent
+	node.parent = newRoot
+	if subtree != nil {
+		subtree.parent = node
+	}
+
+	// Update balance factors after rotation
+	node.bf = node.balanceFactor()
+	newRoot.bf = newRoot.balanceFactor()
+
+	return newRoot
+}
+
+// rotateRightLeft performs a double rotation: right rotation followed by
+// left rotation. This handles the Right-Left case in AVL rebalancing.
+//
+//	       Step 1:         Step 2:         Result:
+//
+//		      3               3               5
+//			 / \             / \             / \
+//			1   7    =>     1   5     =>    3   7
+//			   / \             / \         / \ / \
+//			  5   8           4   7       1  4 6  8
+//			 / \                 / \
+//			4   6               6   8
+func rotateRightLeft[T constraints.Ordered](node *avlNode[T]) *avlNode[T] {
+	if node == nil || node.right == nil {
+		return node
+	}
+
+	// First rotation: right rotation on node.right
+	node.right = rotateRight(node.right)
+	// Update parent pointer
+	if node.right != nil {
+		node.right.parent = node
+	}
+
+	// Second rotation: left rotation on node
+	return rotateLeft(node)
+}
+
+// rotateLeftRight performs a double rotation: left rotation
+// followed by right rotation.
+// This handles the Left-Right case in AVL rebalancing.
+//
+// Step 1:         Step 2:          Result:
+//
+//	        7             7               5
+//		   / \           / \             / \
+//		  3   8   =>    5   8     =>    3   7
+//		 / \           / \             / \ / \
+//		1   5         3   6           1  4 6  8
+//		   / \       / \
+//		  4   6     1   4
+func rotateLeftRight[T constraints.Ordered](node *avlNode[T]) *avlNode[T] {
+	if node == nil || node.left == nil {
+		return node
+	}
+
+	// First rotation: left rotation on node.left
+	node.left = rotateLeft(node.left)
+	// Update parent pointer
 	if node.left != nil {
 		node.left.parent = node
 	}
 
-	// If the left child had a right grandchild tree, it jumps over to become
-	// the new right childs left node.
-	node.right.left = grandchildR
-	if node.right.left != nil {
-		node.right.left.parent = node.right
-	}
-
-	// If there was an existing right child it becomes nodes right grandchild.
-	node.right.right = childR
-	if node.right.right != nil {
-		node.right.right.parent = node.right
-	}
-
-	// Swap node and new right childs values.
-	//
-	//  parent
-	//    \
-	//    [C]
-	//    / \
-	//  [A] [E]
-	//
-	node.value, childL.value = childL.value, node.value
-
-	// Update the affected nodes balance factors and the parents.
-	updateBalanceFactors(node.left)
-	// For the other child node, only need to update it by itself.
-	// updateBalanceFactors handles the main node and on up.
-	if node.right != nil {
-		node.right.bf = node.right.balanceFactor()
-	}
-
-	// Return new root of rotated subtree
-	return node
-}
-
-// rotateRightLeft performs a double rotation, first right around the
-// middle node to transform it into the standard form for the follow up
-// rotateLeft.
-//
-//	 \
-//	[ H ] (+2)
-//	    \
-//	   [ N ] (-1)
-//	   /
-//	[ K ] (0)
-//
-// becomes:
-//
-//	 \
-//	[ H ] (+2)
-//	    \
-//	   [ K ] (+1)
-//	      \
-//	      [ N ] (0)
-//
-// which becomes:
-//
-//	    \
-//	   [ K ] (0)
-//	   /   \
-//	[ H ] [ Z ]
-//	 (0)   (0)
-//
-// And balance is once again restored.
-func rotateRightLeft[T constraints.Ordered](node *avlNode[T]) *avlNode[T] {
-	rotateRight(node.right)
-	rotateLeft(node)
-
-	return node
-}
-
-func rotateLeftRight[T constraints.Ordered](node *avlNode[T]) *avlNode[T] {
-	rotateLeft(node.left)
-	rotateRight(node)
-
-	return node
+	// Second rotation: right rotation on node
+	return rotateRight(node)
 }
 
 // Delete the requested node from the tree and reports if it was successful.
@@ -510,7 +419,7 @@ func (t *avlNode[T]) Search(v T) bool {
 	return t.right.Search(v)
 }
 
-// Traverses traverse the tree in the specified order emitting the values to
+// Traverse traverses the tree in the specified order emitting the values to
 // the channel. Channel is closed once the final value is emitted.
 //
 // NOTE: Nodes in general are not expected to initiate the traverse. It would
@@ -551,6 +460,11 @@ func (t *avlNode[T]) Height() int {
 	return rHeight + 1
 }
 
+// toTestString prints out this node with all its properties and children as a
+// formatted Go value ready to copy and paste into test code. The parent
+// pointer is not set here because it is created when the variable
+// is instantiated. The indent param tells how deep in the tree we are so the
+// value comes out already gofmt'ed.
 func (t *avlNode[T]) toTestString(buf *bytes.Buffer, indent int) {
 	// testIndents is a sequence of tab characaters that are to be substringed
 	// at the necessary level for proper indenting of node text.
@@ -570,4 +484,35 @@ func (t *avlNode[T]) toTestString(buf *bytes.Buffer, indent int) {
 		t.right.toTestString(buf, indent+1)
 		buf.WriteString(testIndents[:indent] + "},\n")
 	}
+}
+
+// Clone creates a deep copy of this AVL node and its subtree.
+func (t *avlNode[T]) Clone() Tree[T] {
+	if t == nil {
+		return nil
+	}
+
+	clone := &avlNode[T]{
+		value:  t.value,
+		bf:     t.bf,
+		parent: nil, // Parent will be set during tree construction
+		left:   nil,
+		right:  nil,
+	}
+
+	if t.left != nil {
+		if leftClone, ok := t.left.Clone().(*avlNode[T]); ok {
+			clone.left = leftClone
+			leftClone.parent = clone
+		}
+	}
+
+	if t.right != nil {
+		if rightClone, ok := t.right.Clone().(*avlNode[T]); ok {
+			clone.right = rightClone
+			rightClone.parent = clone
+		}
+	}
+
+	return clone
 }

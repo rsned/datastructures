@@ -7,6 +7,13 @@ import (
 	"github.com/google/go-cmp/cmp"
 )
 
+// newIntBST creates a new instance of a an integer AVL.
+func newIntAVL() *AVL[int] {
+	return &AVL[int]{
+		root: nil,
+	}
+}
+
 var (
 	avlTestTree = &AVL[int]{
 		root: &avlNode[int]{
@@ -130,10 +137,8 @@ func TestAVLInsert(t *testing.T) {
 		success bool
 	}{
 		{
-			have: &AVL[int]{
-				root: nil,
-			},
-			val: 11,
+			have: newIntAVL(),
+			val:  11,
 			want: &AVL[int]{
 				root: &avlNode[int]{
 					value:  11,
@@ -258,4 +263,28 @@ func testAVLInsertDump(t *testing.T) {
 	}
 
 	t.Errorf("done: %v\n", tree.toTestString())
+}
+
+func TestAVLClone(t *testing.T) {
+	// Create an AVL tree and insert some values
+	original := newIntAVL()
+	values := []int{5, 3, 7, 2, 4, 6, 8}
+
+	for _, v := range values {
+		original.Insert(v)
+	}
+
+	// Clone the tree
+	cloned, _ := original.Clone().(*AVL[int])
+
+	// Verify that both trees are equal using BinaryTreesEqual
+	if !BinaryTreesEqual(original.Root(), cloned.Root()) {
+		t.Error("Cloned AVL tree should be equal to original tree")
+	}
+
+	// Test that modifications to the clone don't affect the original
+	cloned.Insert(10)
+	if BinaryTreesEqual(original.Root(), cloned.Root()) {
+		t.Error("Original tree should not be equal to modified clone")
+	}
 }

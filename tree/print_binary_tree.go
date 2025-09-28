@@ -40,7 +40,6 @@ func PrintBinaryTreeASCII[T constraints.Ordered](label string, t BinaryTree[T]) 
 
 	// First pass starts with the root node, then we go into the loop of
 	// legs and nodes until we are all done.
-	fmt.Printf("print root node")
 	outputNodes(nodes, indentOpts, &buf, depthFrom)
 
 	for depthFrom > 0 {

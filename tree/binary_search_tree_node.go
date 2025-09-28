@@ -53,6 +53,8 @@ func (t *bstNode[T]) Metadata() string {
 // if the operation was successful.
 func (t *bstNode[T]) Insert(v T) bool {
 	if t == nil {
+		// If this node is nil, the parent caller needs to create the new
+		// node and set the pointer to it.
 		return false
 	}
 
@@ -90,15 +92,78 @@ func (t *bstNode[T]) Insert(v T) bool {
 	return t.right.Insert(v)
 }
 
+// findMin finds the node with the minimum value in the subtree rooted at t.
+func (t *bstNode[T]) findMin() *bstNode[T] {
+	if t == nil {
+		return nil
+	}
+	for t.left != nil {
+		t = t.left
+	}
+
+	return t
+}
+
+// deleteInternal performs the actual deletion and returns the new root.
+// This is an internal method that handles root changes properly.
+func (t *bstNode[T]) deleteInternal(v T) (*bstNode[T], bool) {
+	if t == nil {
+		return nil, false
+	}
+
+	if v < t.value {
+		var deleted bool
+		t.left, deleted = t.left.deleteInternal(v)
+
+		return t, deleted
+	} else if v > t.value {
+		var deleted bool
+		t.right, deleted = t.right.deleteInternal(v)
+
+		return t, deleted
+	}
+
+	// Node found - handle the three deletion cases
+
+	// Case 1: Node with no children (leaf node)
+	if t.left == nil && t.right == nil {
+		return nil, true
+	}
+
+	// Case 2a: Node with only right child
+	if t.left == nil {
+		return t.right, true
+	}
+
+	// Case 2b: Node with only left child
+	if t.right == nil {
+		return t.left, true
+	}
+
+	// Case 3: Node with two children
+	// Replace with inorder successor (minimum value in right subtree)
+	successor := t.right.findMin()
+	t.value = successor.value
+	// TODO(rsned): Check the success param and handle the failure case.
+	t.right, _ = t.right.deleteInternal(successor.value)
+
+	return t, true
+}
+
 // Delete the requested node from the tree and reports if it was successful.
 // If the value is not in the tree, the tree is unchanged and false is returned.
 // If the node is not a leaf the trees internal structure may be updated.
-func (t *bstNode[T]) Delete(_ T) bool {
+// For proper deletion that can change the root, use BST.Delete() instead.
+func (t *bstNode[T]) Delete(v T) bool {
 	if t == nil {
 		return false
 	}
 
-	return false
+	// For compatibility with the BinaryTree interface, we perform deletion
+	// but can't change the root. This is a limitation of the current interface.
+	_, deleted := t.deleteInternal(v)
+
+	return deleted
 }
 
 // Search reports if the given value is in the tree.
@@ -145,4 +210,31 @@ func (t *bstNode[T]) Height() int {
 	}
 
 	return rh + 1
+}
+
+// Clone creates a deep copy of this BST node and its subtree.
+func (t *bstNode[T]) Clone() Tree[T] {
+	if t == nil {
+		return nil
+	}
+
+	clone := &bstNode[T]{
+		value: t.value,
+		left:  nil,
+		right: nil,
+	}
+
+	if t.left != nil {
+		if leftClone, ok := t.left.Clone().(*bstNode[T]); ok {
+			clone.left = leftClone
+		}
+	}
+
+	if t.right != nil {
+		if rightClone, ok := t.right.Clone().(*bstNode[T]); ok {
+			clone.right = rightClone
+		}
+	}
+
+	return clone
 }
