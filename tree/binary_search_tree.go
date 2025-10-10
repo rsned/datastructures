@@ -2,6 +2,8 @@ package tree
 
 import "golang.org/x/exp/constraints"
 
+const treeTypeBST = "BST"
+
 // BST is the simplest binary tree type. A node value and left and right
 // pointers. No balancing or shuffling.
 type BST[T constraints.Ordered] struct {

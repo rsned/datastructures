@@ -8,6 +8,7 @@ type redBlackNode[T constraints.Ordered] struct {
 
 	isRed bool
 
+	parent      *redBlackNode[T]
 	left, right *redBlackNode[T]
 }
 
@@ -147,10 +148,11 @@ func (t *redBlackNode[T]) Clone() Tree[T] {
 	}
 
 	clone := &redBlackNode[T]{
-		value: t.value,
-		isRed: t.isRed,
-		left:  nil,
-		right: nil,
+		value:  t.value,
+		isRed:  t.isRed,
+		parent: t.parent,
+		left:   nil,
+		right:  nil,
 	}
 
 	if t.left != nil {

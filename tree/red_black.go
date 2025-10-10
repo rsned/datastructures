@@ -2,6 +2,8 @@ package tree
 
 import "golang.org/x/exp/constraints"
 
+const treeTypeRedBlack = "Red-Black"
+
 // RedBlack Tree.
 type RedBlack[T constraints.Ordered] struct {
 	root *redBlackNode[T]

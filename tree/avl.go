@@ -6,6 +6,8 @@ import (
 	"golang.org/x/exp/constraints"
 )
 
+const treeTypeAVL = "AVL"
+
 // AVL tree (named after inventors Adelson-Velsky and Landis) is a
 // self-balancing binary search tree. In an AVL tree, the heights of the two
 // child subtrees of any node differ by at most one; if at any time they differ
