@@ -61,10 +61,11 @@ func (t *redBlackNode[T]) Insert(v T) bool {
 	if v < t.value {
 		if t.left == nil {
 			t.left = &redBlackNode[T]{
-				value: v,
-				isRed: true,
-				left:  nil,
-				right: nil,
+				value:  v,
+				isRed:  true,
+				parent: nil,
+				left:   nil,
+				right:  nil,
 			}
 
 			return true
@@ -75,10 +76,11 @@ func (t *redBlackNode[T]) Insert(v T) bool {
 
 	if t.right == nil {
 		t.right = &redBlackNode[T]{
-			value: v,
-			isRed: true,
-			left:  nil,
-			right: nil,
+			value:  v,
+			isRed:  true,
+			parent: nil,
+			left:   nil,
+			right:  nil,
 		}
 
 		return true

@@ -25,10 +25,11 @@ func (t *RedBlack[T]) Root() BinaryTree[T] {
 func (t *RedBlack[T]) Insert(v T) bool {
 	if t.root == nil {
 		t.root = &redBlackNode[T]{
-			value: v,
-			isRed: false,
-			left:  nil,
-			right: nil,
+			value:  v,
+			isRed:  false,
+			parent: nil,
+			left:   nil,
+			right:  nil,
 		}
 
 		return true
