@@ -68,12 +68,12 @@ func TestLastNonNilNode(t *testing.T) {
 		{
 			name:  "empty slice",
 			nodes: []BinaryTree[int]{},
-			want:  0,
+			want:  -1,
 		},
 		{
 			name:  "all nil slice",
 			nodes: []BinaryTree[int]{nil, nil, nil},
-			want:  0,
+			want:  -1,
 		},
 		{
 			name:  "single non-nil at index 0",

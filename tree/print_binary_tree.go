@@ -7,82 +7,62 @@ import (
 	"golang.org/x/exp/constraints"
 )
 
-// MaxPrintableLevel is the maximum number of levels to print because
-// the ASCII tree is approximately doubling in printed width at each level.
-//
-// This value is arbitrary.
-//
-// But using the general printing spacings for a node width of various chars,
-// we end up with a potential max width for depth N as follows.
-//
-// depth | width=3 | width=5 | width=7
-// ------+---------+---------+---------
-// 1     |       3 |       5 |       7
-// 2     |      12 |      13 |      24
-// 3     |      26 |      33 |      50
-// 4     |      54 |      73 |     102
-// 5     |     110 |     158 |     206
-// 6     |     222 |     318 |     414
-// 7     |     443 |     638 |     822
-// 8     |     894 |    1278 |    1662
-// 9     |    1790 |    2558 |    3326
-const MaxPrintableLevel = 6 // 0-based, so 6 means 7 levels of tree height (0-6)
+// MaxPrintableLevel defines the maximum depth (0-indexed) of a tree that will
+// be rendered by PrintBinaryTreeASCII. Trees deeper than this will be
+// truncated with an ellipsis (...). This limit exists because the width of the
+// ASCII tree grows exponentially with its height, quickly becoming too wide
+// for standard displays.
+const MaxPrintableLevel = 6 // Renders a tree of height 7 (levels 0 through 6).
 
-// PrintBinaryTreeASCII outputs the binary tree up to 6 levels deep
-// for the purpose of aiding in testing and debugging.
+// PrintBinaryTreeASCII generates a string containing an ASCII art representation
+// of a binary tree. It is a useful tool for debugging and visualizing the
+// structure of a tree.
 //
-// This method takes a binary tree of type T with an explicit assumption
-// the values in the tree are under 11 character wide when formatted and
-// printed. e.g. -21, 123, 7, 6.02e23, etc.  Values wider than 11 characters
-// may work fine, but no testing or quality checks have been done.
+// The rendering is optimized for node values that are up to 11 characters wide.
+// An optional label can be provided, which will be printed before the tree.
+// If the tree's height exceeds MaxPrintableLevel, it will be truncated.
 //
-// An optional label is output before the tree contents with a blank line
-// separator between the label and the tree.
-//
-// TODO(rsned): Add an elideLevel int param to do the eliding dynamically.
+// label is an optional title to print above the tree.
+// t is the binary tree to be printed.
+// Returns a string containing the ASCII representation.
 func PrintBinaryTreeASCII[T constraints.Ordered](label string, t BinaryTree[T]) string {
 	var buf bytes.Buffer
 	if len(label) > 0 {
 		buf.WriteString(label + "\n\n")
 	}
-	// This doesn't work on interface to generic types.
-	// If the tree is nil, it skips this and crashes later on.
+
 	if isTreeNil(t) {
 		buf.WriteString("nil tree\n")
-
 		return buf.String()
 	}
 
 	stats := analyzeTree(t)
 	height := stats.height
+	if height < 0 {
+		buf.WriteString("empty tree\n")
+		return buf.String()
+	}
 
-	node := t
-	nodes := []BinaryTree[T]{node}
-	var nextNodes []BinaryTree[T]
-
-	var depthFrom int
+	// Determine the starting depth for rendering, truncating if necessary.
+	depthFrom := height
 	if height > MaxPrintableLevel {
 		depthFrom = MaxPrintableLevel
-	} else {
-		depthFrom = height - 1
 	}
 
 	indentOpts := indentOptsForNodeWidth(stats.widestValue)
+	nodes := []BinaryTree[T]{t}
 
-	// First pass starts with the root node, then we go into the loop of
-	// legs and nodes until we are all done.
+	// Render the tree level by level, from the root down.
 	outputNodes(nodes, indentOpts, &buf, depthFrom)
-
 	for depthFrom > 0 {
-		nextNodes = generateLevelsNodes(nodes)
-		outputLegs(nextNodes, indentOpts, &buf, depthFrom)
+		nodes = generateLevelsNodes(nodes)
+		outputLegs(nodes, indentOpts, &buf, depthFrom)
 
 		depthFrom--
-		nodes = nextNodes
 		outputNodes(nodes, indentOpts, &buf, depthFrom)
 	}
 
-	// Add ellipsis if tree was truncated
+	// Add an ellipsis if the tree was taller than the print limit.
 	if height > MaxPrintableLevel+1 {
 		buf.WriteString("...\n")
 	}
@@ -90,65 +70,50 @@ func PrintBinaryTreeASCII[T constraints.Ordered](label string, t BinaryTree[T]) 
 	return buf.String()
 }
 
-// writeLeg replaces the boilerplate with a simple helper.
-func writeLeg[T constraints.Ordered](leg BinaryTree[T], legString string, indentString string, buf *bytes.Buffer) {
-	if leg != nil {
+// writeLeg is a small helper to write either a leg segment or padding,
+// depending on whether a node exists at a given position.
+func writeLeg[T constraints.Ordered](leg BinaryTree[T], legString, padString string, buf *bytes.Buffer) {
+	if !isTreeNil(leg) {
 		buf.WriteString(legString)
 	} else {
-		buf.WriteString(indentString)
+		buf.WriteString(padString)
 	}
 }
 
-// outputLegs does the boring bits of printing out visible or missing
-// legs and the appropriate spacings between each one.
+// outputLegs renders the connector lines (legs) between one level of nodes
+// and the level below it. It calculates the correct spacing to ensure the
+// legs point to the correct child positions.
 func outputLegs[T constraints.Ordered](nodes []BinaryTree[T], indentOptions indentOptionsMap, buf *bytes.Buffer, depthFrom int) {
 	opts := indentOptions[depthFrom]
-	nodeSize := opts.nodeWidth
-	lastNode := lastNonNilNode(nodes) // Tells us when to stop printing a line.
+	lastNode := lastNonNilNode(nodes)
+	if lastNode == -1 {
+		return
+	}
 
-	for i, ll := range leftLegs[:opts.legDepth] {
+	// Render each segment of the legs (for multi-line legs).
+	for i := 0; i < opts.legDepth; i++ {
 		buf.WriteString(prefixPad[:opts.prefixPadding])
-		for j := 0; j < len(nodes); j++ {
-			// If we've handled the last real node in the list, break out.
-			if j > lastNode {
-				break
-			}
-
+		for j := 0; j <= lastNode; j += 2 {
+			// Calculate padding and leg characters for the left child.
 			legDepthPad := opts.legDepth - 1 - i
+			leftLegStr := legPad[:legDepthPad] + leftLegs[i]
+			writeLeg(nodes[j], leftLegStr, indentFull[:opts.legDepth], buf)
 
-			// offset is based on number of leg segments to be drawn at
-			// this level. left leg needs to be limited to this legDepth.
-			leftLeg := otherPad[:legDepthPad] + ll
-			writeLeg(nodes[j], leftLeg, indentFull[:opts.legDepth], buf)
-
-			// If this level has lateral legs, put in blanks to cover.
+			// Render padding between the two legs of a single parent.
+			buf.WriteString(shoulderPad[:opts.shoulderPadding])
+			buf.WriteString(intraPad[:opts.nodeWidth])
 			buf.WriteString(shoulderPad[:opts.shoulderPadding])
 
-			// Right legs are the next value, so jump forward to them.
-			j++
-			if j > lastNode {
-				break
-			}
-			// Double check that we don't have an odd number of nodes.
-			if j >= len(nodes) {
-				break
+			// Calculate padding and leg characters for the right child.
+			rightLegStr := rightLegs[i] + legPad[:legDepthPad]
+			if j+1 <= lastNode {
+				writeLeg(nodes[j+1], rightLegStr, indentFull[:opts.legDepth], buf)
+			} else {
+				buf.WriteString(indentFull[:opts.legDepth])
 			}
 
-			// The spacing between the two legs in the tree.
-			// Higher up nodes in the tree have more spacing to handle
-			// the fanout as the tree grows.
-			buf.WriteString(intraPad[:nodeSize])
-
-			// If this level has lateral leg elements, put in blanks to cover.
-			buf.WriteString(shoulderPad[:opts.shoulderPadding])
-
-			// right leg needs to be limited to legDepth
-			rl := rightLegs[i] + otherPad2[:legDepthPad]
-			writeLeg(nodes[j], rl, indentFull[:opts.legDepth], buf)
-
-			// For all but the final node in the list.
-			if j != len(nodes)-1 {
-				// Spacing between subtrees.
+			// Render padding between different subtrees.
+			if j+1 < lastNode {
 				buf.WriteString(interPad[:opts.interTreePadding])
 			}
 		}
@@ -156,150 +121,93 @@ func outputLegs[T constraints.Ordered](nodes []BinaryTree[T], indentOptions inde
 	}
 }
 
-// outputNodes writes out all the nodes and metadata at this level.
+// outputNodes renders the node values and their metadata for a single level
+// of the tree. It also renders the horizontal bars that connect to the legs.
 func outputNodes[T constraints.Ordered](nodes []BinaryTree[T], indentOptions indentOptionsMap, buf *bytes.Buffer, depthFrom int) {
-	opts := indentOptions[depthFrom]
-	nodeSize := opts.nodeWidth
-	parentOpts := indentOptions[depthFrom+1]
-	lastNode := lastNonNilNode(nodes) // Tells us when to stop printing a line.
-
-	// TODO(rsned): printing of nodes and printing of metadata is a giant
-	// copy and paste.  Replace with one block of logic. Pre-generate a
-	// slice of node formatted values and a slice of metadata formatted
-	// values and then run both slices through the same print loop.
-	buf.WriteString(prefixPad[:opts.prefixPadding])
-	for j, n := range nodes {
-		// For all rows except the bottom row, each node potentially has
-		// both left and right legs below it that need to be padded for.
-		if depthFrom != 0 || (depthFrom == 0 && j != 0 && j%2 == 1) {
-			buf.WriteString(legPad[:opts.legDepth])
-		}
-
-		// Levels more than 3 from the bottom have "leg" lines that go
-		// sideways to keep the tree reasonably compact vertically.
-		if n != nil && n.HasLeft() {
-			buf.WriteString(underbarFull[:opts.shoulderPadding])
-		} else {
-			buf.WriteString(shoulderPad[:opts.shoulderPadding])
-		}
-
-		// The actual node value.
-		if n != nil {
-			buf.WriteString(centerString(fmt.Sprintf(nodeFmt, n.Value()), " ",
-				nodeSize))
-		} else {
-			buf.WriteString(indentFull[:nodeSize])
-		}
-
-		// If this is the last node of the line with no right child,
-		// skip all the remaining work.
-		if j >= lastNode && n != nil && !n.HasRight() {
-			break
-		}
-
-		// This is the padding or right child underbar.
-		if n != nil && n.HasRight() {
-			buf.WriteString(underbarFull[:opts.shoulderPadding])
-		} else {
-			buf.WriteString(shoulderPad[:opts.shoulderPadding])
-		}
-
-		// We want the padding to match the number of leg segments
-		// leading down into the child nodes.
-		buf.WriteString(legPad[:opts.legDepth])
-
-		// If we've handled the last real node in the list, break out without
-		// add more trailing padded we don't need.
-		if j >= lastNode {
-			break
-		}
-
-		// Between the even and odd node indexes the spacing breakdown
-		// matches what the outputLegs does (combination of shoulder
-		// spacing and nodeWidth but based on the next higher level
-		// ups indent optiond. e.g Even index values represent
-		// left legs and odd indexes represent right legs.
-		inter := (parentOpts.legDepth + parentOpts.shoulderPadding) -
-			(opts.legDepth + opts.shoulderPadding)
-		if j%2 == 0 {
-			buf.WriteString(shoulderPad[:inter])
-			buf.WriteString(intraPad[:nodeSize])
-			buf.WriteString(shoulderPad[:inter])
-		} else {
-			// Finish off with the spacing between the trees.
-			buf.WriteString(interPad[:opts.interTreePadding])
-		}
-	}
-	buf.WriteString("\n")
-
-	if !levelHasMetadata(nodes) {
+	lastNode := lastNonNilNode(nodes)
+	if lastNode == -1 {
 		return
 	}
 
-	// TODO(rsned): Need to convert the print of metadata to match the spacing / alignment as the values.
+	// --- Render Node Values ---
+	printNodeLine(nodes, indentOptions, buf, depthFrom, true)
 
-	// Add metadata print
+	// --- Render Node Metadata (if any) ---
+	if levelHasMetadata(nodes) {
+		printNodeLine(nodes, indentOptions, buf, depthFrom, false)
+	}
+}
+
+// printNodeLine is a helper to render a single line of output for a level,
+// either for the node values or their metadata.
+func printNodeLine[T constraints.Ordered](nodes []BinaryTree[T], indentOptions indentOptionsMap, buf *bytes.Buffer, depthFrom int, isValueLine bool) {
+	opts := indentOptions[depthFrom]
+	parentOpts := indentOptions[depthFrom+1]
+	lastNode := lastNonNilNode(nodes)
+
 	buf.WriteString(prefixPad[:opts.prefixPadding])
 	for j, n := range nodes {
-		// For all rows except the bottom row,  each node potentially has
-		// both left and right legs below it that need to be padded for.
-		if depthFrom != 0 || (depthFrom == 0 && j != 0 && j%2 == 1) {
+		// Determine the content to print (value or metadata).
+		var content string
+		if !isTreeNil(n) {
+			if isValueLine {
+				content = fmt.Sprintf(nodeFmt, n.Value())
+			} else {
+				content = n.Metadata()
+			}
+		}
+
+		// Calculate inter-node spacing based on parent level's layout.
+		inter := (parentOpts.legDepth + parentOpts.shoulderPadding) - (opts.legDepth + opts.shoulderPadding)
+
+		// Add leading leg/shoulder padding.
+		if depthFrom != 0 || (j%2 == 1) {
 			buf.WriteString(legPad[:opts.legDepth])
 		}
-
-		// Higher up levels have lines that go sideways to keep the tree
-		// reasonably sized.
-		buf.WriteString(shoulderPad[:opts.shoulderPadding])
-
-		if n != nil {
-			buf.WriteString(centerString(fmt.Sprintf(nodeMetaFmt, n.Metadata()), " ", nodeSize))
+		if !isTreeNil(n) && n.HasLeft() {
+			buf.WriteString(underbarFull[:opts.shoulderPadding])
 		} else {
-			buf.WriteString(indentFull[:nodeSize])
+			buf.WriteString(shoulderPad[:opts.shoulderPadding])
 		}
 
-		// If this is the last node, skip all the remaining trailing padding.
-		if j >= lastNode {
-			break
+		// Write the centered content.
+		if !isTreeNil(n) {
+			buf.WriteString(centerString(content, " ", opts.nodeWidth))
+		} else {
+			buf.WriteString(indentFull[:opts.nodeWidth])
 		}
 
-		// Higher up levels have lines that go sideways to keep the tree
-		// reasonably sized.
-		buf.WriteString(shoulderPad[:opts.shoulderPadding])
-
-		// This is the padding to match the leg above it.
-		// If this is an even index, then we want the padding to match
-		// the number of leg segments leading down into this node
-		// on the inside of the node values.
+		// Add trailing shoulder/leg padding.
+		if !isTreeNil(n) && n.HasRight() {
+			buf.WriteString(underbarFull[:opts.shoulderPadding])
+		} else {
+			buf.WriteString(shoulderPad[:opts.shoulderPadding])
+		}
 		buf.WriteString(legPad[:opts.legDepth])
 
 		if j >= lastNode {
 			break
 		}
 
-		inter := (parentOpts.legDepth + parentOpts.shoulderPadding) -
-			(opts.legDepth + opts.shoulderPadding)
-		if j%2 == 0 {
+		// Add padding between nodes.
+		if j%2 == 0 { // Space between a left and right child.
 			buf.WriteString(shoulderPad[:inter])
-			buf.WriteString(intraPad[:nodeSize])
+			buf.WriteString(intraPad[:opts.nodeWidth])
 			buf.WriteString(shoulderPad[:inter])
-		} else {
-			// Finish off with the spacing between the trees.
+		} else { // Space between two different subtrees.
 			buf.WriteString(interPad[:opts.interTreePadding])
 		}
 	}
 	buf.WriteString("\n")
 }
 
-// levelHasMetadata reports if the current set of nodes has any elements with
-// some metadata value.
+// levelHasMetadata checks if any node in a given level has non-empty metadata.
+// This is used to decide whether to print the metadata line for a level.
 func levelHasMetadata[T constraints.Ordered](nodes []BinaryTree[T]) bool {
-	has := false
 	for _, n := range nodes {
-		if n == nil {
-			continue
+		if !isTreeNil(n) && n.Metadata() != "" {
+			return true
 		}
-		has = has || (n.Metadata() != "")
 	}
-
-	return has
+	return false
 }

@@ -2,45 +2,51 @@ package tree
 
 import "golang.org/x/exp/constraints"
 
-// BinaryTree is the simplest tree type.
-//
-// A node value and two children (left and right).
+// BinaryTree defines the interface for a binary tree node. It extends the base
+// Tree interface with methods specific to nodes in a binary tree structure,
+// such as accessing its value and children.
 type BinaryTree[T constraints.Ordered] interface {
+	// Tree is the embedded base interface, providing common tree operations.
 	Tree[T]
 
-	// Value returns the value at this node in the tree.
+	// Value returns the value stored at the current node in the tree.
 	Value() T
 
-	// HasLeft reports if this node has a Left child.
+	// HasLeft reports whether the current node has a left child.
 	HasLeft() bool
 
-	// HasRight reports if this node has a Right child.
+	// HasRight reports whether the current node has a right child.
 	HasRight() bool
 
-	// Left returns the Left child, if any, of this node.
+	// Left returns the left child of the current node. It returns nil if the
+	// node does not have a left child.
 	Left() BinaryTree[T]
 
-	// Right returns the Right child, if any, of this node.
+	// Right returns the right child of the current node. It returns nil if the
+	// node does not have a right child.
 	Right() BinaryTree[T]
 
-	// Metadata returns a metadata string, if any, for this node in the tree.
-	//
-	// Some examples include Balance Factor for an AVL tree, or Red/Black for a
-	// node in a Red-Black tree.
-	//
-	// This is primarily used when rendering the tree.
+	// Metadata returns a string containing metadata about the node, which is
+	// useful for visualization and debugging. For example, an AVL tree node
+	// might return its balance factor, while a Red-Black tree node might
+	// return its color.
 	Metadata() string
 }
 
-// traverseBinaryTree is a recursive function that traverses a BinaryTree
-// in the given order emitting values to the given channel.
+// traverseBinaryTree is an internal recursive helper function that traverses a
+// BinaryTree in a specified order and sends the node values to a channel.
 //
-// It does NOT close the channel when it is finished.
+// This function does NOT close the channel when it completes. The caller is
+// responsible for managing the channel's lifecycle. It is intended to be run
+// in a separate goroutine to enable concurrent traversal.
 //
-// Best usage is to kick this off in a goroutine.
+// tree is the starting node for the traversal.
+// tOrder specifies the traversal order (e.g., In-Order, Pre-Order).
+// ch is the channel to which the traversed values are sent.
 func traverseBinaryTree[T constraints.Ordered](tree BinaryTree[T], tOrder TraverseOrder, ch chan T) {
-	// What to do if the type underlying the tree is nil?
-	// We can't nil check a pointer to an interface
+	// A nil check on an interface in Go is tricky. If a concrete type with a
+	// nil value is passed, the interface itself is not nil. We rely on the
+	// calling context to ensure a valid tree is passed.
 	switch tOrder {
 	case TraverseInOrder:
 		if tree.HasLeft() {
@@ -75,9 +81,10 @@ func traverseBinaryTree[T constraints.Ordered](tree BinaryTree[T], tOrder Traver
 			traverseBinaryTree(tree.Left(), tOrder, ch)
 		}
 	case TraverseLevelOrder:
-		// panic("Level Order traversal not implemented")
+	// Level-order traversal is typically handled iteratively with a queue,
+	// not recursively, so it's omitted here. The public Traverse method on
+	// tree implementations will handle this case.
 	default:
-		// TODO(rsned): There aren't other choices, so should this be
-		// an error or panic as well?
+		// Invalid traversal order; do nothing.
 	}
 }

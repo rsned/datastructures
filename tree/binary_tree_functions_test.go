@@ -325,7 +325,7 @@ func TestBinaryTreesEquivalentAndEqual(t *testing.T) {
 	}
 }
 
-func TestBinaryTreeStructure(t *testing.T) {
+func TestGetTreeStructure(t *testing.T) {
 	tests := []struct {
 		name string
 		tree *BST[int]
@@ -357,10 +357,10 @@ func TestBinaryTreeStructure(t *testing.T) {
 			test.tree.Insert(val)
 		}
 
-		got := binaryTreeStructure(test.tree.Root())
+		got := getTreeStructure(test.tree.Root())
 
 		if !cmp.Equal(test.want, got, cmpopts.EquateEmpty()) {
-			t.Errorf("%s: binaryTreeStructure(%+v) = %+v, want %+v\ndiff: %+v",
+			t.Errorf("%s: getTreeStructure(%+v) = %+v, want %+v\ndiff: %+v",
 				test.name, test.tree, got, test.want, cmp.Diff(test.want, got))
 		}
 	}
