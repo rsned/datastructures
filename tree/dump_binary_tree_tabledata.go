@@ -67,6 +67,11 @@ var (
 	//
 	// The data is prepopulated with the ground level spacings from which the
 	// layers above are filled in during init().
+	//
+	// TODO(rsned): Since we've currently settled on
+	// nodeWidth == intraNodePadding, we should be able to replace these hard
+	// coded starting values with a loop over the odd integer
+	// values <= maxNodeWidth.
 	binaryTreeSpacingData = map[int]indentOptionsMap{
 		1: map[int]indentOptions{
 			0: {
@@ -127,9 +132,9 @@ var (
 		// 10-11 width
 		11: map[int]indentOptions{
 			0: {
-				nodeWidth:        9,
+				nodeWidth:        11,
 				prefixPadding:    0,
-				intraNodePadding: 9,
+				intraNodePadding: 11,
 				interTreePadding: 3,
 				shoulderPadding:  0,
 				legDepth:         0,

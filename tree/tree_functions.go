@@ -202,12 +202,12 @@ func Equivalent[T constraints.Ordered](a, b Tree[T], opts ...OptionFunc) bool {
 	return BinaryTreesEquivalent(aBinary, bBinary)
 }
 
-// Summarize takes a tree and reports a set of basic facts about the tree.
-// Some data points include height of tree, optimality of tree balance,
-// tree size, etc.
-//
-// TODO(rsned): See about generating a struct with interesting fields.
-func Summarize[T constraints.Ordered](_ Tree[T]) string {
+// Summarize takes a tree and returns comprehensive statistics and analysis
+// about the tree structure, balance, performance characteristics, and more.
+func Summarize[T constraints.Ordered](_ Tree[T]) *Summary[T] {
+	var summary *Summary[T]
+
 	// TODO(rsned): Implement this.
-	return ""
+
+	return summary
 }

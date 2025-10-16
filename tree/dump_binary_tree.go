@@ -47,7 +47,7 @@ const (
 )
 
 // maxPadding is how long to make the pad strings we substring against.
-const maxPadding = 512
+const maxPadding = 2048
 
 var (
 	// leftLegs is a slice of the angled leg strings in order to be
@@ -195,12 +195,23 @@ func RenderBinaryTree[T constraints.Ordered](t BinaryTree[T], _ int, mode Render
 	case ModeSVG:
 		return "SVG method not implemented yet"
 	default:
-		return "Method not implemented yet"
+		return "Unknown render mode not implemented yet"
 	}
 }
 
+// maxNodeWidth is the maximum supported width of a node value that
+// can be printed.
+const maxNodeWidth = 11
+
 func indentOptsForNodeWidth(width int) indentOptionsMap {
-	// TODO(rsned): Add check for maxSupportedWidth to prevent crashes.
+	// Ensure width is within valid bounds [1, maxNodeWidth] to prevent
+	// index errors.
+	if width < 1 {
+		width = 1
+	} else if width > maxNodeWidth {
+		width = maxNodeWidth
+	}
+
 	return binaryTreeSpacingData[width+(width+1)%2]
 }
 
@@ -285,9 +296,15 @@ type dumpTreeStats struct {
 func analyzeTree[T constraints.Ordered](tree BinaryTree[T]) dumpTreeStats {
 	stats := dumpTreeStats{
 		height:      tree.Height(),
-		leftHeight:  tree.Left().Height(),
-		rightHeight: tree.Right().Height(),
+		leftHeight:  0,
+		rightHeight: 0,
 		widestValue: 0,
+	}
+	if tree.HasLeft() {
+		stats.leftHeight = tree.Left().Height()
+	}
+	if tree.HasRight() {
+		stats.rightHeight = tree.Right().Height()
 	}
 
 	// things we want to find out:

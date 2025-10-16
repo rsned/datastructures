@@ -7,6 +7,27 @@ import (
 	"golang.org/x/exp/constraints"
 )
 
+// MaxPrintableLevel is the maximum number of levels to print because
+// the ASCII tree is approximately doubling in printed width at each level.
+//
+// This value is arbitrary.
+//
+// But using the general printing spacings for a node width of various chars,
+// we end up with a potential max width for depth N as follows.
+//
+// depth | width=3 | width=5 | width=7
+// ------+---------+---------+---------
+// 1     |       3 |       5 |       7
+// 2     |      12 |      13 |      24
+// 3     |      26 |      33 |      50
+// 4     |      54 |      73 |     102
+// 5     |     110 |     158 |     206
+// 6     |     222 |     318 |     414
+// 7     |     443 |     638 |     822
+// 8     |     894 |    1278 |    1662
+// 9     |    1790 |    2558 |    3326
+const MaxPrintableLevel = 6 // 0-based, so 6 means 7 levels of tree height (0-6)
+
 // PrintBinaryTreeASCII outputs the binary tree up to 6 levels deep
 // for the purpose of aiding in testing and debugging.
 //
@@ -17,6 +38,8 @@ import (
 //
 // An optional label is output before the tree contents with a blank line
 // separator between the label and the tree.
+//
+// TODO(rsned): Add an elideLevel int param to do the eliding dynamically.
 func PrintBinaryTreeASCII[T constraints.Ordered](label string, t BinaryTree[T]) string {
 	var buf bytes.Buffer
 	if len(label) > 0 {
@@ -32,10 +55,18 @@ func PrintBinaryTreeASCII[T constraints.Ordered](label string, t BinaryTree[T]) 
 
 	stats := analyzeTree(t)
 	height := stats.height
+
 	node := t
 	nodes := []BinaryTree[T]{node}
 	var nextNodes []BinaryTree[T]
-	depthFrom := height - 1
+
+	var depthFrom int
+	if height > MaxPrintableLevel {
+		depthFrom = MaxPrintableLevel
+	} else {
+		depthFrom = height - 1
+	}
+
 	indentOpts := indentOptsForNodeWidth(stats.widestValue)
 
 	// First pass starts with the root node, then we go into the loop of
@@ -44,13 +75,16 @@ func PrintBinaryTreeASCII[T constraints.Ordered](label string, t BinaryTree[T]) 
 
 	for depthFrom > 0 {
 		nextNodes = generateLevelsNodes(nodes)
-		// fmt.Printf("nextNodes: %d   %+v\n\n", len(nextNodes), nextNodes)
 		outputLegs(nextNodes, indentOpts, &buf, depthFrom)
 
 		depthFrom--
-		indentOpts = indentOptsForNodeWidth(stats.widestValue)
 		nodes = nextNodes
 		outputNodes(nodes, indentOpts, &buf, depthFrom)
+	}
+
+	// Add ellipsis if tree was truncated
+	if height > MaxPrintableLevel+1 {
+		buf.WriteString("...\n")
 	}
 
 	return buf.String()
@@ -70,7 +104,8 @@ func writeLeg[T constraints.Ordered](leg BinaryTree[T], legString string, indent
 func outputLegs[T constraints.Ordered](nodes []BinaryTree[T], indentOptions indentOptionsMap, buf *bytes.Buffer, depthFrom int) {
 	opts := indentOptions[depthFrom]
 	nodeSize := opts.nodeWidth
-	lastNode := lastNonNilNode(nodes)
+	lastNode := lastNonNilNode(nodes) // Tells us when to stop printing a line.
+
 	for i, ll := range leftLegs[:opts.legDepth] {
 		buf.WriteString(prefixPad[:opts.prefixPadding])
 		for j := 0; j < len(nodes); j++ {
@@ -123,12 +158,15 @@ func outputLegs[T constraints.Ordered](nodes []BinaryTree[T], indentOptions inde
 
 // outputNodes writes out all the nodes and metadata at this level.
 func outputNodes[T constraints.Ordered](nodes []BinaryTree[T], indentOptions indentOptionsMap, buf *bytes.Buffer, depthFrom int) {
-	// fmt.Printf("outputNodes: depthfrom: %d nodes (%d): %+v\n",		depthFrom, len(nodes), nodes)
 	opts := indentOptions[depthFrom]
 	nodeSize := opts.nodeWidth
 	parentOpts := indentOptions[depthFrom+1]
-	lastNode := lastNonNilNode(nodes)
+	lastNode := lastNonNilNode(nodes) // Tells us when to stop printing a line.
 
+	// TODO(rsned): printing of nodes and printing of metadata is a giant
+	// copy and paste.  Replace with one block of logic. Pre-generate a
+	// slice of node formatted values and a slice of metadata formatted
+	// values and then run both slices through the same print loop.
 	buf.WriteString(prefixPad[:opts.prefixPadding])
 	for j, n := range nodes {
 		// For all rows except the bottom row, each node potentially has
@@ -211,9 +249,7 @@ func outputNodes[T constraints.Ordered](nodes []BinaryTree[T], indentOptions ind
 
 		// Higher up levels have lines that go sideways to keep the tree
 		// reasonably sized.
-		// if n != nil && n.HasLeft() {
 		buf.WriteString(shoulderPad[:opts.shoulderPadding])
-		//}
 
 		if n != nil {
 			buf.WriteString(centerString(fmt.Sprintf(nodeMetaFmt, n.Metadata()), " ", nodeSize))

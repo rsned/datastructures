@@ -2,6 +2,7 @@ package tree
 
 import (
 	"fmt"
+	"strings"
 	"testing"
 )
 
@@ -27,21 +28,28 @@ var (
 	// Pathological Zigzag values.  Builds a 10 level deep tree
 	// going back and forth.
 	zigZag10LevelsBST = []int{
-		9, 1, 8, 2, 7, 3, 6, 4, 5, // 6, 7, 8, 9,
+		9, 0, 8, 1, 7, 2, 6, 3, 5, 4,
 	}
 )
 
 func testBinaryInsertDump(t *testing.T) {
 	t.Helper()
-	tree := &BST[int]{root: nil}
 
-	for _, val := range zigZag10LevelsBST {
-		ok := tree.Insert(val)
-		if !ok {
-			t.Errorf("Insert(%v) = %v, want %v", val, ok, true)
+	for _, treeVals := range [][]int{
+		full5LevelBST,
+		leftLegOnly10LevelsBST,
+		rightLegOnly10LevelsBST,
+		zigZag10LevelsBST,
+	} {
+		tree := &BST[int]{root: nil}
+		for _, val := range treeVals {
+			ok := tree.Insert(val)
+			if !ok {
+				t.Errorf("Insert(%v) = %v, want %v", val, ok, true)
+			}
 		}
+		fmt.Printf("\n%s\n", PrintBinaryTreeASCII("", tree.Root()))
 	}
-	fmt.Printf("\n%s\n", PrintBinaryTreeASCII("", tree.Root()))
 
 	t.Errorf("done")
 }
@@ -173,4 +181,105 @@ func TestCenterString(t *testing.T) {
 			t.Errorf("centerString(%q, %d) = %q, want %q", test.have, test.width, got, test.want)
 		}
 	}
+}
+
+func TestPrintBinaryTreeASCIIHeightLimit(t *testing.T) {
+	// Test tree with height exactly MaxPrintableLevel+1 levels -
+	// should print normally
+	t.Run("tree_height_max_printable_levels", func(t *testing.T) {
+		tree := newIntBST()
+
+		// Insert values to create exactly MaxPrintableLevel+1 levels
+		// This creates a left-skewed tree with MaxPrintableLevel+1 levels
+		for i := MaxPrintableLevel; i >= 0; i-- {
+			tree.Insert(i)
+		}
+
+		result := PrintBinaryTreeASCII("", tree.Root())
+
+		// Should contain the tree structure without "..."
+		if strings.Contains(result, "...") {
+			t.Errorf("Tree with height %d should print normally, but got '...':\n%s", MaxPrintableLevel+1, result)
+		}
+
+		// Should contain the root value
+		if !strings.Contains(result, fmt.Sprintf("%d", MaxPrintableLevel)) {
+			t.Errorf("Result should contain root value '%d':\n%s", MaxPrintableLevel, result)
+		}
+	})
+
+	// Test tree with height greater than MaxPrintableLevel+1 levels - should truncate with "..."
+	t.Run("tree_height_greater_than_max_printable", func(t *testing.T) {
+		tree := newIntBST()
+
+		// Insert values to create more than MaxPrintableLevel+1 levels
+		// This creates a left-skewed tree with MaxPrintableLevel+2+ levels
+		for i := MaxPrintableLevel + 1; i >= 0; i-- {
+			tree.Insert(i)
+		}
+
+		result := PrintBinaryTreeASCII("", tree.Root())
+
+		// Should end with "..."
+		if !strings.Contains(result, "...") {
+			t.Errorf("Tree with height > %d should end with '...', but got:\n%s", MaxPrintableLevel+1, result)
+		}
+
+		// Should contain the root value (level 0)
+		if !strings.Contains(result, fmt.Sprintf("%d", MaxPrintableLevel+1)) {
+			t.Errorf("Result should contain root value '%d':\n%s", MaxPrintableLevel+1, result)
+		}
+
+		// Should contain some intermediate values but not the deepest ones
+		if !strings.Contains(result, fmt.Sprintf("%d", MaxPrintableLevel)) || !strings.Contains(result, fmt.Sprintf("%d", MaxPrintableLevel-1)) {
+			t.Errorf("Result should contain intermediate values '%d' and '%d':\n%s", MaxPrintableLevel, MaxPrintableLevel-1, result)
+		}
+	})
+
+	// Test tree with height less than MaxPrintableLevel+1 levels - should print normally
+	t.Run("tree_height_less_than_max_printable", func(t *testing.T) {
+		tree := &BST[int]{root: nil}
+
+		// Insert values to create less than MaxPrintableLevel+1 levels
+		for i := MaxPrintableLevel / 2; i >= 0; i-- {
+			tree.Insert(i)
+		}
+
+		result := PrintBinaryTreeASCII("", tree.Root())
+
+		// Should contain the tree structure without "..."
+		if strings.Contains(result, "...") {
+			t.Errorf("Tree with height < %d should print normally, but got '...':\n%s", MaxPrintableLevel+1, result)
+		}
+
+		// Should contain all values
+		for val := range MaxPrintableLevel / 2 {
+			if !strings.Contains(result, fmt.Sprintf("%d", val)) {
+				t.Errorf("Result should contain value '%d':\n%s", val, result)
+			}
+		}
+	})
+
+	// Test with label - label should always appear
+	t.Run("tree_with_label_height_greater_than_max_printable", func(t *testing.T) {
+		tree := newIntBST()
+
+		// Create a tree with > MaxPrintableLevel+1 levels
+		for i := MaxPrintableLevel + 1; i >= 0; i-- {
+			tree.Insert(i)
+		}
+
+		label := "Test Tree"
+		result := PrintBinaryTreeASCII(label, tree.Root())
+
+		// Should start with the label
+		if !strings.Contains(result, label) {
+			t.Errorf("Result should start with label '%s', but got:\n%s", label, result)
+		}
+
+		// Should still end with "..."
+		if !strings.Contains(result, "...") {
+			t.Errorf("Tree with height > %d should end with '...', but got:\n%s", MaxPrintableLevel+1, result)
+		}
+	})
 }

@@ -61,8 +61,14 @@ func (t *RedBlack[T]) Search(v T) bool {
 
 // Traverse traverse the tree in the specified order emitting the values to
 // the channel. Channel is closed once the final value is emitted.
-func (t *RedBlack[T]) Traverse(_ TraverseOrder) <-chan T {
-	return make(chan T)
+func (t *RedBlack[T]) Traverse(tOrder TraverseOrder) <-chan T {
+	ch := make(chan T)
+	go func() {
+		traverseBinaryTree(t.root, tOrder, ch)
+		close(ch)
+	}()
+
+	return ch
 }
 
 // Height returns the height of the longest path in the tree from the
