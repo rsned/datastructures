@@ -2,236 +2,210 @@ package tree
 
 import "golang.org/x/exp/constraints"
 
-// bstNode is the basic node in a binary search tree.
+// bstNode represents a single node within a Binary Search Tree (BST).
+// It holds the node's value and pointers to its left and right children.
+// It is not exported and is managed by the BST struct.
 type bstNode[T constraints.Ordered] struct {
 	value T
-
-	// The two children nodes.
-	left, right *bstNode[T]
+	left  *bstNode[T]
+	right *bstNode[T]
 }
 
-// HasLeft reports if this node has a Left child.
-func (t *bstNode[T]) HasLeft() bool {
-	if t == nil {
+// HasLeft reports whether the node has a left child.
+func (n *bstNode[T]) HasLeft() bool {
+	if n == nil {
 		return false
 	}
-
-	return t.left != nil
+	return n.left != nil
 }
 
-// HasRight reports if this node has a Right child.
-func (t *bstNode[T]) HasRight() bool {
-	if t == nil {
+// HasRight reports whether the node has a right child.
+func (n *bstNode[T]) HasRight() bool {
+	if n == nil {
 		return false
 	}
-
-	return t.right != nil
+	return n.right != nil
 }
 
-// Left returns this nodes Left child.
-func (t *bstNode[T]) Left() BinaryTree[T] {
-	return t.left
+// Left returns the left child of the node as a BinaryTree[T].
+// It returns nil if there is no left child.
+func (n *bstNode[T]) Left() BinaryTree[T] {
+	if n == nil {
+		return nil
+	}
+	return n.left
 }
 
-// Right returns this nodes Right child.
-func (t *bstNode[T]) Right() BinaryTree[T] {
-	return t.right
+// Right returns the right child of the node as a BinaryTree[T].
+// It returns nil if there is no right child.
+func (n *bstNode[T]) Right() BinaryTree[T] {
+	if n == nil {
+		return nil
+	}
+	return n.right
 }
 
-// Value returns this nodes Value.
-func (t *bstNode[T]) Value() T {
-	return t.value
+// Value returns the value stored at the node.
+func (n *bstNode[T]) Value() T {
+	return n.value
 }
 
-// Metadata returns a string of metadata about this node.
-// Plain binary search trees have nothing interesting to show.
-func (t *bstNode[T]) Metadata() string {
+// Metadata returns an empty string, as a standard bstNode does not have any
+// specific metadata to display. This method satisfies the BinaryTree[T] interface.
+func (n *bstNode[T]) Metadata() string {
 	return ""
 }
 
-// Insert inserts the value into the tree, growing as needed, and reports
-// if the operation was successful.
-func (t *bstNode[T]) Insert(v T) bool {
-	if t == nil {
-		// If this node is nil, the parent caller needs to create the new
-		// node and set the pointer to it.
-		return false
+// Insert adds a new value into the subtree rooted at the current node.
+// It maintains the BST property. Duplicates are not allowed.
+// Returns true if the value was inserted, false if it already exists.
+func (n *bstNode[T]) Insert(v T) bool {
+	if v == n.value {
+		return false // Duplicate value
 	}
 
-	// Duplicates are not allowed.
-	if v == t.value {
-		return false
-	}
-
-	// If we need to go farther left, add a new node if needed,
-	// otherwise recurse!
-	if v < t.value {
-		if t.left == nil {
-			t.left = &bstNode[T]{
-				value: v,
-				left:  nil,
-				right: nil,
-			}
-
+	if v < n.value {
+		if n.left == nil {
+			n.left = &bstNode[T]{value: v}
 			return true
 		}
-
-		return t.left.Insert(v)
+		return n.left.Insert(v)
 	}
 
-	if t.right == nil {
-		t.right = &bstNode[T]{
-			value: v,
-			left:  nil,
-			right: nil,
-		}
-
+	if n.right == nil {
+		n.right = &bstNode[T]{value: v}
 		return true
 	}
-
-	return t.right.Insert(v)
+	return n.right.Insert(v)
 }
 
-// findMin finds the node with the minimum value in the subtree rooted at t.
-func (t *bstNode[T]) findMin() *bstNode[T] {
-	if t == nil {
-		return nil
+// findMin finds the node with the minimum value in the subtree rooted at n.
+// This is a helper function used during the deletion process to find the
+// in-order successor.
+func (n *bstNode[T]) findMin() *bstNode[T] {
+	current := n
+	for current != nil && current.left != nil {
+		current = current.left
 	}
-	for t.left != nil {
-		t = t.left
-	}
-
-	return t
+	return current
 }
 
-// deleteInternal performs the actual deletion and returns the new root.
-// This is an internal method that handles root changes properly.
-func (t *bstNode[T]) deleteInternal(v T) (*bstNode[T], bool) {
-	if t == nil {
+// deleteInternal is a helper that performs the actual deletion from the subtree
+// rooted at `n`. It returns the new root of the (potentially modified) subtree
+// and a boolean indicating if the deletion occurred.
+func (n *bstNode[T]) deleteInternal(v T) (*bstNode[T], bool) {
+	if n == nil {
 		return nil, false
 	}
 
-	if v < t.value {
-		var deleted bool
-		t.left, deleted = t.left.deleteInternal(v)
-
-		return t, deleted
-	} else if v > t.value {
-		var deleted bool
-		t.right, deleted = t.right.deleteInternal(v)
-
-		return t, deleted
+	var deleted bool
+	if v < n.value {
+		n.left, deleted = n.left.deleteInternal(v)
+		return n, deleted
+	} else if v > n.value {
+		n.right, deleted = n.right.deleteInternal(v)
+		return n, deleted
 	}
 
-	// Node found - handle the three deletion cases
+	// Value matches, this is the node to delete.
 
 	// Case 1: Node with no children (leaf node)
-	if t.left == nil && t.right == nil {
+	if n.left == nil && n.right == nil {
 		return nil, true
 	}
 
-	// Case 2a: Node with only right child
-	if t.left == nil {
-		return t.right, true
-	}
-
-	// Case 2b: Node with only left child
-	if t.right == nil {
-		return t.left, true
+	// Case 2: Node with one child
+	if n.left == nil {
+		return n.right, true
+	} else if n.right == nil {
+		return n.left, true
 	}
 
 	// Case 3: Node with two children
-	// Replace with inorder successor (minimum value in right subtree)
-	successor := t.right.findMin()
-	t.value = successor.value
-	// TODO(rsned): Check the success param and handle the failure case.
-	t.right, _ = t.right.deleteInternal(successor.value)
-
-	return t, true
+	// Replace with in-order successor (minimum value in the right subtree).
+	successor := n.right.findMin()
+	n.value = successor.value
+	// Delete the in-order successor from the right subtree.
+	n.right, _ = n.right.deleteInternal(successor.value)
+	return n, true
 }
 
-// Delete the requested node from the tree and reports if it was successful.
-// If the value is not in the tree, the tree is unchanged and false is returned.
-// If the node is not a leaf the trees internal structure may be updated.
-// For proper deletion that can change the root, use BST.Delete() instead.
-func (t *bstNode[T]) Delete(v T) bool {
-	if t == nil {
+// Delete removes a value from the subtree rooted at the current node.
+// This method is provided to satisfy the BinaryTree[T] interface.
+// WARNING: This method cannot change the root of the tree. For safe deletion,
+// always call Delete from the top-level BST struct.
+func (n *bstNode[T]) Delete(v T) bool {
+	if n == nil {
 		return false
 	}
-
-	// For compatibility with the BinaryTree interface, we perform deletion
-	// but can't change the root. This is a limitation of the current interface.
-	_, deleted := t.deleteInternal(v)
-
+	_, deleted := n.deleteInternal(v)
 	return deleted
 }
 
-// Search reports if the given value is in the tree.
-func (t *bstNode[T]) Search(v T) bool {
-	if t == nil {
+// Search recursively looks for a value in the subtree rooted at the current node.
+// It returns true if the value is found, and false otherwise.
+func (n *bstNode[T]) Search(v T) bool {
+	if n == nil {
 		return false
 	}
-	if v == t.value {
+	if v == n.value {
 		return true
 	}
 
-	if v < t.value {
-		return t.left.Search(v)
+	if v < n.value {
+		return n.left.Search(v)
 	}
-
-	return t.right.Search(v)
+	return n.right.Search(v)
 }
 
-// Traverse traverses the tree in the specified order emitting the values to
-// the channel. Channel is closed once the final value is emitted.
-//
-// NOTE: Nodes in general are not expected to initiate the traverse. It would
-// normally be kicked off by the main container type, e.g., BST not bstNode.
-func (t *bstNode[T]) Traverse(tOrder TraverseOrder) <-chan T {
+// Traverse traverses the subtree rooted at this node.
+// This method is provided to satisfy the BinaryTree[T] interface. Traversal is
+// typically initiated from the main tree structure (e.g., BST) rather than an
+// individual node.
+func (n *bstNode[T]) Traverse(tOrder TraverseOrder) <-chan T {
 	ch := make(chan T)
 	go func() {
-		traverseBinaryTree(t, tOrder, ch)
-		close(ch)
+		defer close(ch)
+		if n != nil {
+			traverseBinaryTree(n, tOrder, ch)
+		}
 	}()
-
 	return ch
 }
 
-// Height returns the height of the longest path in the tree from the
-// root node to the farthest leaf.
-func (t *bstNode[T]) Height() int {
-	if t == nil {
+// Height calculates the height of the subtree rooted at the current node.
+// A single node has a height of 1. An empty (nil) node has a height of 0.
+func (n *bstNode[T]) Height() int {
+	if n == nil {
 		return 0
 	}
-	lh := t.left.Height()
-	rh := t.right.Height()
+	lh := n.left.Height()
+	rh := n.right.Height()
 	if lh > rh {
 		return lh + 1
 	}
-
 	return rh + 1
 }
 
-// Clone creates a deep copy of this BST node and its subtree.
-func (t *bstNode[T]) Clone() Tree[T] {
-	if t == nil {
+// Clone creates a deep copy of the node and its entire subtree.
+// It returns the new node, satisfying the Tree[T] interface.
+func (n *bstNode[T]) Clone() Tree[T] {
+	if n == nil {
 		return nil
 	}
 
 	clone := &bstNode[T]{
-		value: t.value,
-		left:  nil,
-		right: nil,
+		value: n.value,
 	}
 
-	if t.left != nil {
-		if leftClone, ok := t.left.Clone().(*bstNode[T]); ok {
+	if n.left != nil {
+		if leftClone, ok := n.left.Clone().(*bstNode[T]); ok {
 			clone.left = leftClone
 		}
 	}
 
-	if t.right != nil {
-		if rightClone, ok := t.right.Clone().(*bstNode[T]); ok {
+	if n.right != nil {
+		if rightClone, ok := n.right.Clone().(*bstNode[T]); ok {
 			clone.right = rightClone
 		}
 	}

@@ -10,10 +10,9 @@ import (
 
 const treeTypeUnknown = "Unknown"
 
-// BalanceQuality is a enum for the balance quality of a tree.
-// It is an arbitrary set of values ranging from Well Balanced to
-// Severely Right/Left Heavy. The change over points are chosen by
-// me to what feels reasonable.
+// BalanceQuality provides a qualitative assessment of a tree's balance.
+// The categories are based on the balance score, providing a human-readable
+// description of how skewed the tree is.
 type BalanceQuality int
 
 const (
@@ -25,130 +24,133 @@ const (
 	SlightlyRightHeavy
 	ModeratelyRightHeavy
 	SeverelyRightHeavy
-	Degenerate // Essentially a linked list
+	Degenerate // Represents a tree that has devolved into a linked list.
 )
 
-// balanceQualityString converts BalanceQuality enum to string
-func balanceQualityString(bq BalanceQuality) string {
+// String returns the string representation of a BalanceQuality enum value.
+func (bq BalanceQuality) String() string {
 	switch bq {
 	case BalanceUnknown:
-		return treeTypeUnknown
+		return "Unknown"
 	case SeverelyLeftHeavy:
-		return "Severely Left Heavy"
+		return "Severely Left-Heavy"
 	case ModeratelyLeftHeavy:
-		return "Moderately Left Heavy"
+		return "Moderately Left-Heavy"
 	case SlightlyLeftHeavy:
-		return "Slightly Left Heavy"
+		return "Slightly Left-Heavy"
 	case WellBalanced:
-		return "Well Balanced"
+		return "Well-Balanced"
 	case SlightlyRightHeavy:
-		return "Slightly Right Heavy"
+		return "Slightly Right-Heavy"
 	case ModeratelyRightHeavy:
-		return "Moderately Right Heavy"
+		return "Moderately Right-Heavy"
 	case SeverelyRightHeavy:
-		return "Severely Right Heavy"
+		return "Severely Right-Heavy"
 	case Degenerate:
 		return "Degenerate (Linear)"
 	default:
-		return treeTypeUnknown
+		return "Unknown"
 	}
 }
 
-// Summary contains comprehensive statistics and analysis of a Tree's
-// data structure to help understand its characteristics at a glance.
+// Summary provides a comprehensive analysis of a tree's structural properties
+// and statistics. It is designed to give a quick, high-level understanding of
+// the tree's state, including its size, balance, and efficiency.
 type Summary[T constraints.Ordered] struct {
-	// Basic Tree Information
-	treeType  string // "BST", "AVL", "RedBlack", etc.
-	nodeCount int    // Total number of nodes
-	height    int    // Maximum depth from root to leaf
-	isEmpty   bool   // Whether tree has any nodes
-
-	// Value Range Information
-	minValue  T    // Smallest value in tree
-	maxValue  T    // Largest value in tree
-	hasValues bool // Whether min/max are valid
-
-	// Balance and Structure Metrics
-	balanceQuality   BalanceQuality // Enum: Balanced, LeftHeavy, RightHeavy, etc.
-	balanceScore     float64        // Numerical balance score [-1.0 to 1.0]
-	optimalHeight    int            // Theoretical minimum height for node count
-	heightEfficiency float64        // Ratio of optimal to actual height [0 to 1.0]
-
-	// TODO(rsned): Add more fields of interest.
+	treeType         string
+	nodeCount        int
+	height           int
+	isEmpty          bool
+	minValue         T
+	maxValue         T
+	hasValues        bool
+	balanceQuality   BalanceQuality
+	balanceScore     float64
+	optimalHeight    int
+	heightEfficiency float64
 }
 
-// TreeType returns the type of tree (BST, AVL, RedBlack, etc.)
-func (ts *Summary[T]) TreeType() string {
-	return ts.treeType
+// TreeType returns the identified type of the tree (e.g., "BST", "AVL").
+func (s *Summary[T]) TreeType() string {
+	return s.treeType
 }
 
-// NodeCount returns the total number of nodes in the tree
-func (ts *Summary[T]) NodeCount() int {
-	return ts.nodeCount
+// NodeCount returns the total number of nodes in the tree.
+func (s *Summary[T]) NodeCount() int {
+	return s.nodeCount
 }
 
-// Height returns the maximum depth from root to leaf
-func (ts *Summary[T]) Height() int {
-	return ts.height
+// Height returns the measured height of the tree.
+func (s *Summary[T]) Height() int {
+	return s.height
 }
 
-// IsEmpty returns whether the tree has any nodes
-func (ts *Summary[T]) IsEmpty() bool {
-	return ts.isEmpty
+// IsEmpty reports whether the tree contains any nodes.
+func (s *Summary[T]) IsEmpty() bool {
+	return s.isEmpty
 }
 
-// MinValue returns the minimum value in the tree
-func (ts *Summary[T]) MinValue() (T, bool) {
-	return ts.minValue, ts.hasValues
+// MinValue returns the smallest value stored in the tree and a boolean
+// indicating if the value is valid (i.e., the tree is not empty).
+func (s *Summary[T]) MinValue() (T, bool) {
+	return s.minValue, s.hasValues
 }
 
-// MaxValue returns the maximum value in the tree
-func (ts *Summary[T]) MaxValue() (T, bool) {
-	return ts.maxValue, ts.hasValues
+// MaxValue returns the largest value stored in the tree and a boolean
+// indicating if the value is valid.
+func (s *Summary[T]) MaxValue() (T, bool) {
+	return s.maxValue, s.hasValues
 }
 
-// HasValues returns whether the tree contains values
-func (ts *Summary[T]) HasValues() bool {
-	return ts.hasValues
+// HasValues reports whether the tree contains any values.
+func (s *Summary[T]) HasValues() bool {
+	return s.hasValues
 }
 
-// BalanceQuality returns the balance quality enum
-func (ts *Summary[T]) BalanceQuality() BalanceQuality {
-	return ts.balanceQuality
+// BalanceQuality returns the qualitative assessment of the tree's balance.
+func (s *Summary[T]) BalanceQuality() BalanceQuality {
+	return s.balanceQuality
 }
 
-// BalanceScore returns the numerical balance score (-1.0 to 1.0)
-func (ts *Summary[T]) BalanceScore() float64 {
-	return ts.balanceScore
+// BalanceScore returns a numerical score from -1.0 (perfectly left-skewed) to
+// 1.0 (perfectly right-skewed), with 0 representing a perfectly balanced tree.
+func (s *Summary[T]) BalanceScore() float64 {
+	return s.balanceScore
 }
 
-// OptimalHeight returns the theoretical minimum height for the node count
-func (ts *Summary[T]) OptimalHeight() int {
-	return ts.optimalHeight
+// OptimalHeight returns the theoretical minimum possible height for a binary
+// tree with the same number of nodes.
+func (s *Summary[T]) OptimalHeight() int {
+	return s.optimalHeight
 }
 
-// HeightEfficiency returns the ratio of optimal to actual height
-func (ts *Summary[T]) HeightEfficiency() float64 {
-	return ts.heightEfficiency
+// HeightEfficiency returns the ratio of the optimal height to the actual
+// height, providing a score from 0.0 to 1.0 where 1.0 is most efficient.
+func (s *Summary[T]) HeightEfficiency() float64 {
+	return s.heightEfficiency
 }
 
-// String returns a human-readable representation of the tree summary
-func (ts *Summary[T]) String() string {
-	var sb strings.Builder
-
-	sb.WriteString("=== Tree Summary ===\n")
-	sb.WriteString(fmt.Sprintf("Type: %s\n", ts.treeType))
-	sb.WriteString(fmt.Sprintf("Empty: %t\n", ts.isEmpty))
-
-	if !ts.isEmpty {
-		sb.WriteString(fmt.Sprintf("Nodes: %d\n", ts.nodeCount))
-		sb.WriteString(fmt.Sprintf("Height: %d\n", ts.height))
+// String provides a formatted, human-readable summary of the tree's statistics.
+func (s *Summary[T]) String() string {
+	if s == nil {
+		return "nil summary"
 	}
-
+	var sb strings.Builder
+	sb.WriteString("=== Tree Summary ===\n")
+	sb.WriteString(fmt.Sprintf("  Type: %s\n", s.treeType))
+	sb.WriteString(fmt.Sprintf("  Is Empty: %t\n", s.isEmpty))
+	if !s.isEmpty {
+		sb.WriteString(fmt.Sprintf("  Node Count: %d\n", s.nodeCount))
+		sb.WriteString(fmt.Sprintf("  Height: %d (Optimal: %d, Efficiency: %.2f%%)\n", s.height, s.optimalHeight, s.heightEfficiency*100))
+		if s.hasValues {
+			sb.WriteString(fmt.Sprintf("  Value Range: [%v, %v]\n", s.minValue, s.maxValue))
+		}
+		sb.WriteString(fmt.Sprintf("  Balance: %s (Score: %.2f)\n", s.balanceQuality, s.balanceScore))
+	}
 	return sb.String()
 }
 
-// determineTreeType identifies the concrete type of the tree
+// determineTreeType uses type assertion to identify the concrete type of the tree.
 func determineTreeType[T constraints.Ordered](tree Tree[T]) string {
 	switch tree.(type) {
 	case *AVL[T]:
@@ -162,26 +164,14 @@ func determineTreeType[T constraints.Ordered](tree Tree[T]) string {
 	}
 }
 
-// calculateBasicMetrics computes node count and value range
-//
-// This method is not thread-safe as the Tree could be modified during the
-// traversing of the tree leading to inconsistent results.
+// calculateBasicMetrics traverses the tree to compute fundamental metrics like
+// node count, value range, and height efficiency.
 func calculateBasicMetrics[T constraints.Ordered](tree Tree[T], summary *Summary[T]) {
-	// Check if tree is empty first (avoids interface nil pointer issues)
-	if tree.Height() == 0 {
+	if isTreeNil(tree) || tree.Height() < 0 {
 		return
 	}
 
-	// Get traverser interface - all Tree implementations provide this
-	traverser, ok := tree.(Traverser[T])
-	if !ok {
-		return
-	}
-
-	// Use the tree's built-in traversal (order doesn't matter for metrics)
-	valueChan := traverser.Traverse(TraverseInOrder)
-
-	// Read from channel and update min/max values
+	valueChan := tree.Traverse(TraverseInOrder)
 	first := true
 	for v := range valueChan {
 		summary.nodeCount++
@@ -200,7 +190,6 @@ func calculateBasicMetrics[T constraints.Ordered](tree Tree[T], summary *Summary
 		}
 	}
 
-	// Calculate optimal height
 	if summary.nodeCount > 0 {
 		summary.optimalHeight = int(math.Ceil(math.Log2(float64(summary.nodeCount + 1))))
 		if summary.height > 0 {

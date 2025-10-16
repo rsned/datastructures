@@ -1,45 +1,90 @@
-# datastructures
-A collection of data structure libraries and utilities in Go. There already exist many of these on the internet. This collection is mostly for my own edification and refreshing all the old knowledge.
+# Go Data Structures
 
-## Tree Data Structures
+[![Go Reference](https://pkg.go.dev/badge/github.com/rsned/datastructures.svg)](https://pkg.go.dev/github.com/rsned/datastructures)
+[![Go Report Card](https://goreportcard.com/badge/github.com/rsned/datastructures)](https://goreportcard.com/report/github.com/rsned/datastructures)
 
-The main implementation in this repository is the [`tree`](tree/) package, which provides a comprehensive collection of tree data structures implemented using Go generics for any type satisfying `constraints.Ordered` (int, float64, string, etc.)
+A collection of well-documented, generic data structure implementations in Go. This repository is intended for both educational purposes and practical use, providing clear and reusable components.
 
-### Implemented Tree Types
+## Overview
 
-- **Binary Tree** - General binary tree interface providing the `Tree[T]`, `Value`, `Left`, and `Right` concepts.
-- **Binary Search Tree (BST)** - Basic unbalanced binary search tree
-- **AVL Tree** - Self-balancing height-balanced binary tree  
-- **Red-Black Tree** - Approximately balanced tree with red/black node coloring
+This project provides robust implementations of common data structures, built with Go generics to be type-safe and flexible. The primary focus is currently on tree-based structures, with plans to expand to other types in the future.
 
-### Key Features
+The main package in this repository is [`tree`](./tree/), which offers a comprehensive collection of tree data structures.
 
-- All trees implement the `Tree[T]` interface for consistent operations (Insert, Delete, Search, Traverse)
-- All of the common traversal orders are supported: in-order, pre-order, post-order, reverse-order, and level-order traversal
-- ASCII tree display functionality for debugging and visualization (supports up to height 9 before eliding. (Beyond height 5 though, your display needs to get pretty wide pretty quickly)).
-- Extensive test coverage along with a variety of benchmarks for performance comparison
-- A number of Utility Functions are already implemented with more planned. Tree comparison, equality and equivalence checking, and other helper functions.
+## Key Features
+
+*   **Generic and Type-Safe**: Utilizes Go generics to work with any type that satisfies `constraints.Ordered` (e.g., `int`, `float64`, `string`).
+*   **Consistent API**: All tree types implement a common `Tree[T]` interface for standard operations like `Insert`, `Delete`, `Search`, and `Traverse`.
+*   **Multiple Tree Implementations**:
+    *   **Binary Search Tree (BST)**: A basic, unbalanced binary search tree.
+    *   **AVL Tree**: A self-balancing tree that guarantees O(log n) performance for key operations.
+    *   **Red-Black Tree**: Another self-balancing tree offering a good trade-off between insertion and search performance.
+*   **Rich Functionality**:
+    *   Supports all standard traversal orders (In-Order, Pre-Order, Post-Order, etc.).
+    *   Includes utility functions for tree comparison (`Equal`, `Equivalent`), conversion, and analysis.
+    *   Provides ASCII visualization for debugging and display.
+*   **Thoroughly Tested and Documented**: Comes with extensive unit tests, benchmarks, and complete GoDoc documentation.
+
+## Getting Started
+
+To use this library in your project, you can add it with `go get`:
+
+```sh
+go get github.com/rsned/datastructures
+```
 
 ### Quick Example
 
+Here's a simple example of how to create and use an AVL tree:
+
 ```go
-import "github.com/rsned/datastructures/tree"
+package main
 
-// Create an AVL tree
-avl := tree.NewAVL[int]()
-avl.Insert(10)
-avl.Insert(5)
-avl.Insert(15)
+import (
+	"fmt"
+	"github.com/rsned/datastructures/tree"
+)
 
-// Search and traverse
-found := avl.Search(5)  // true
-for value := range avl.Traverse(tree.TraverseInOrder) {
-    fmt.Println(value)  // 5, 10, 15
+func main() {
+	// Create a new AVL tree for integers.
+	avl := tree.NewAVL[int]()
+
+	// Insert some values.
+	avl.Insert(10)
+	avl.Insert(5)
+	avl.Insert(15)
+	avl.Insert(3)
+	avl.Insert(7)
+
+	// Search for a value.
+	if avl.Search(7) {
+		fmt.Println("Found 7 in the tree.")
+	}
+
+	// Traverse the tree in-order to get sorted values.
+	fmt.Println("In-order traversal:")
+	for value := range avl.Traverse(tree.TraverseInOrder) {
+		fmt.Printf("%d ", value)
+	}
+	fmt.Println()
+
+	// Print a visual representation of the tree.
+	if root, ok := avl.Root().(tree.BinaryTree[int]); ok {
+		fmt.Println("\nASCII Visualization:")
+		fmt.Println(tree.PrintBinaryTreeASCII("", root))
+	}
 }
 ```
 
-For detailed documentation, examples, and API reference, see the [`tree` package documentation](tree/README.md).
+## Documentation
+
+For detailed documentation, examples, and API references, please see the Go documentation or the specific README files within the sub-packages:
+
+*   **[Package Documentation](https://pkg.go.dev/github.com/rsned/datastructures)**
+*   **[`tree` Package README](./tree/README.md)**
 
 ## Future Plans
 
-Additional tree types are planned including B-Tree and B+-Tree implementations for n-ary tree support.
+*   Implement deletion for AVL and Red-Black trees.
+*   Add B-Tree and B+-Tree implementations for n-ary support.
+*   Expand the collection to include other data structures like graphs, heaps, and hash maps.

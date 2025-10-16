@@ -7,120 +7,121 @@ import (
 	"golang.org/x/exp/constraints"
 )
 
-// BinaryTreesEquivalent tests if two BinaryTrees have the same values
-// in the same order.
+// BinaryTreesEquivalent checks if two binary trees contain the exact same set
+// of values in the same order (i.e., their in-order traversals are identical).
+// It does not compare the structural layout of the trees.
 //
-// As an initial pass, we start with step by step walking to see if
-// they are the same.
+// For example, a skewed BST and a balanced AVL tree are equivalent if they
+// contain the same elements, as their in-order traversals will produce the
+// same sorted sequence.
+//
+// a is the first binary tree to compare.
+// b is the second binary tree to compare.
+// Returns true if the trees are equivalent, false otherwise.
 func BinaryTreesEquivalent[T constraints.Ordered](a, b BinaryTree[T]) bool {
-	// If both are nil, then they are equivalent.
-	if isTreeNil(a) == isTreeNil(b) && isTreeNil(a) {
-		return true
+	if isTreeNil(a) && isTreeNil(b) {
+		return true // Both are nil, so they are equivalent.
 	}
-
-	// If one is nil and the other is not, then they are not equivalent.
-	//
-	// TODO(rsned):  Surprise twist! If one is nil and the other is empty,
-	// should that count as equivalent?
-	if isTreeNil(a) != isTreeNil(b) {
-		return false
+	if isTreeNil(a) || isTreeNil(b) {
+		return false // One is nil and the other is not.
 	}
 
 	chA := a.Traverse(TraverseInOrder)
 	chB := b.Traverse(TraverseInOrder)
 
 	for {
-		aVal, moreA := <-chA
-		bVal, moreB := <-chB
+		valA, moreA := <-chA
+		valB, moreB := <-chB
 
-		// Trees encountered differing values at the same step in the walk.
-		if aVal != bVal {
-			return false
-		}
-
-		// One tree finsished but the other has not.
 		if moreA != moreB {
-			return false
+			return false // One traversal finished before the other.
 		}
-
-		// Both traverses are finished and the values matched on every step.
-		if !moreA && !moreB {
-			return true
+		if !moreA {
+			return true // Both traversals finished at the same time.
+		}
+		if valA != valB {
+			return false // Values at the current position differ.
 		}
 	}
 }
 
-// BinaryTreesEqual tests if two BinaryTrees have the same structure and values.
+// BinaryTreesEqual checks if two binary trees are structurally identical and
+// contain the same values at each corresponding node.
+// This is a stricter comparison than equivalence. Both the shape of the tree
+// and the values within must match.
 //
-// TODO(rsned): Make this public method?
+// a is the first binary tree to compare.
+// b is the second binary tree to compare.
+// Returns true if the trees are equal, false otherwise.
 func BinaryTreesEqual[T constraints.Ordered](a, b BinaryTree[T]) bool {
-	// Test of they are equivalent first.
-	return BinaryTreesEquivalent(a, b) && binaryTreeStructureEqual(a, b)
+	// A quick check for equivalence can rule out many non-equal trees.
+	// Note: This is an optimization; structural equality implies equivalence.
+	if !BinaryTreesEquivalent(a, b) {
+		return false
+	}
+	return binaryTreeStructureEqual(a, b)
 }
 
+// binaryTreeStructureEqual is an internal helper that compares the structural
+// layout of two binary trees, ignoring their values.
 func binaryTreeStructureEqual[T constraints.Ordered](a, b BinaryTree[T]) bool {
-	aForm := binaryTreeStructure(a)
-	bForm := binaryTreeStructure(b)
-
+	aForm := getTreeStructure(a)
+	bForm := getTreeStructure(b)
 	return slices.Equal(aForm, bForm)
 }
 
-// binaryTreeStructure returns a string representation of the structure and
-// an in order path through the given tree.
-func binaryTreeStructure[T constraints.Ordered](tree BinaryTree[T]) []string {
-	ch := make(chan string)
-	go func() {
-		traverseBinaryTreeStructure(tree, ch)
-		close(ch)
-	}()
-
-	var got []string
-	for {
-		s, ok := <-ch
-		if ok {
-			got = append(got, s)
-		} else {
-			break
-		}
+// getTreeStructure generates a string representation of a tree's structure
+// by performing a traversal and recording the path taken (e.g., "Down-Left",
+// "Visit", "Up").
+func getTreeStructure[T constraints.Ordered](tree BinaryTree[T]) []string {
+	var path []string
+	if isTreeNil(tree) {
+		return path
 	}
 
-	return got
+	ch := make(chan string)
+	go func() {
+		defer close(ch)
+		traverseBinaryTreeStructure(tree, ch)
+	}()
+
+	for p := range ch {
+		path = append(path, p)
+	}
+	return path
 }
 
-// traverseBinaryTreeStructure walks through a tree emitting directions and
-// nodes to the given channel.
+// traverseBinaryTreeStructure is a recursive helper that walks a tree and sends
+// structural path identifiers ("↓L", "↓R", "V", "↑") to a channel.
 func traverseBinaryTreeStructure[T constraints.Ordered](tree BinaryTree[T], ch chan string) {
 	if isTreeNil(tree) {
 		return
 	}
+
 	if tree.HasLeft() {
-		ch <- "↓L"
+		ch <- "↓L" // Go down to the left child
 		traverseBinaryTreeStructure(tree.Left(), ch)
-		ch <- "↑"
+		ch <- "↑" // Go up from the left child
 	}
-	ch <- "V"
+	ch <- "V" // Visit node
 	if tree.HasRight() {
-		ch <- "↓R"
+		ch <- "↓R" // Go down to the right child
 		traverseBinaryTreeStructure(tree.Right(), ch)
-		ch <- "↑"
+		ch <- "↑" // Go up from the right child
 	}
 }
 
-// isTreeNil checks if the tree generic instance the interface type is
-// pointing to a nil.
+// isTreeNil provides a safe way to check if an interface value that holds a
+// tree is nil. A direct `tree == nil` check can be misleading in Go if the
+// interface holds a nil pointer of a concrete type. This function uses
+// reflection to inspect the underlying value, making it reliable.
 //
-// We can't check directly is ${interface_type} == nil, because of
-// https://go.dev/doc/faq#nil_error.
-//
-// But we can check the Value of the type with reflection. Ideally this will
-// only be used in testing and debugging code such as dumpBinaryTree and not
-// in the normal code paths.
+// This is primarily intended for utility and testing functions.
 func isTreeNil(a any) bool {
 	if a == nil {
 		return true
 	}
-	// Use reflection to check if the underlying value is nil
+	// Use reflection to check if the underlying value is a nil pointer.
 	v := reflect.ValueOf(a)
-
 	return v.Kind() == reflect.Ptr && v.IsNil()
 }

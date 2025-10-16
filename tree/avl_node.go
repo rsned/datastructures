@@ -7,216 +7,129 @@ import (
 	"golang.org/x/exp/constraints"
 )
 
-// avlNode is the actual node in an AVL tree.
+// avlNode represents a single node within an AVL tree.
+// It contains the node's value, pointers to its children and parent, and the
+// balance factor (bf), which is crucial for maintaining the tree's balance.
+// It is not exported and is managed by the AVL struct.
 type avlNode[T constraints.Ordered] struct {
-	value T
-
-	// bf is the balance factor, the height difference of the nodes
-	// two subtrees.
-	bf int
-
-	// parent is a pointer back to the parent node to allow for updates
-	// when rebalancing and navigating.
+	value  T
+	bf     int // The height difference between the right and left subtrees.
 	parent *avlNode[T]
-
-	// The two children nodes.
-	left  *avlNode[T]
-	right *avlNode[T]
+	left   *avlNode[T]
+	right  *avlNode[T]
 }
 
-// HasLeft reports if this node has a Left child.
-func (t *avlNode[T]) HasLeft() bool {
-	return t.left != nil
+// HasLeft reports whether the node has a left child.
+func (n *avlNode[T]) HasLeft() bool {
+	return n.left != nil
 }
 
-// Left returns this nodes Left child.
-func (t *avlNode[T]) Left() BinaryTree[T] {
-	return t.left
+// Left returns the left child of the node as a BinaryTree[T].
+// It returns nil if there is no left child.
+func (n *avlNode[T]) Left() BinaryTree[T] {
+	return n.left
 }
 
-// HasRight reports if this node has a Right child.
-func (t *avlNode[T]) HasRight() bool {
-	return t.right != nil
+// HasRight reports whether the node has a right child.
+func (n *avlNode[T]) HasRight() bool {
+	return n.right != nil
 }
 
-// Right returns this nodes Right child.
-func (t *avlNode[T]) Right() BinaryTree[T] {
-	return t.right
+// Right returns the right child of the node as a BinaryTree[T].
+// It returns nil if there is no right child.
+func (n *avlNode[T]) Right() BinaryTree[T] {
+	return n.right
 }
 
-// Value returns this nodes Value.
-func (t *avlNode[T]) Value() T {
-	return t.value
+// Value returns the value stored at the node.
+func (n *avlNode[T]) Value() T {
+	return n.value
 }
 
-// Metadata returns a string of metadata about this node.
-// For AVL tree, this is the balance factor of the node.
-func (t *avlNode[T]) Metadata() string {
-	return fmt.Sprintf("(%d)", t.bf)
+// Metadata returns a string representing the node's balance factor,
+// e.g., "(-1)". This is used for visualization and debugging.
+func (n *avlNode[T]) Metadata() string {
+	return fmt.Sprintf("(%d)", n.bf)
 }
 
-// balanceFactor returns the nodes balance factor.
-// TODO(rsned): Make this public?
-func (t *avlNode[T]) balanceFactor() int {
-	if t == nil {
+// balanceFactor calculates and returns the node's balance factor, which is
+// the height of the right subtree minus the height of the left subtree.
+func (n *avlNode[T]) balanceFactor() int {
+	if n == nil {
 		return 0
 	}
-
-	return t.right.Height() - t.left.Height()
+	return n.right.Height() - n.left.Height()
 }
 
-// insertInternal performs AVL insertion with proper rebalancing
-// and returns the potential new root.
-func (t *avlNode[T]) insertInternal(v T) (*avlNode[T], bool) {
-	if t == nil {
-		// Create new node
-		newNode := &avlNode[T]{
-			value:  v,
-			bf:     0,
-			parent: nil,
-			left:   nil,
-			right:  nil,
-		}
-
-		return newNode, true
+// insertInternal recursively inserts a new value into the subtree rooted at `n`.
+// After insertion, it rebalances the tree by performing rotations if necessary.
+// It returns the new root of the (potentially modified) subtree and a boolean
+// indicating if the insertion occurred.
+func (n *avlNode[T]) insertInternal(v T) (*avlNode[T], bool) {
+	if n == nil {
+		return &avlNode[T]{value: v}, true
 	}
 
-	// Inserting a duplicate value is an error
-	if v == t.value {
-		return t, false
+	if v == n.value {
+		return n, false // Duplicate value
 	}
 
 	var inserted bool
-	// If we need to go farther left, recurse!
-	if v < t.value {
-		t.left, inserted = t.left.insertInternal(v)
-		if t.left != nil {
-			t.left.parent = t
+	if v < n.value {
+		n.left, inserted = n.left.insertInternal(v)
+		if n.left != nil {
+			n.left.parent = n
 		}
 	} else {
-		// If we need to go farther right, recurse!
-		t.right, inserted = t.right.insertInternal(v)
-		if t.right != nil {
-			t.right.parent = t
+		n.right, inserted = n.right.insertInternal(v)
+		if n.right != nil {
+			n.right.parent = n
 		}
 	}
 
 	if !inserted {
-		return t, false
+		return n, false
 	}
 
-	// Update balance factor
-	t.bf = t.balanceFactor()
+	// Update balance factor and rebalance if necessary.
+	n.bf = n.balanceFactor()
 
-	// Now we need to check for imbalance and apply updates as needed.
-
-	if t.bf > 1 { // The node is right-heavy
-		// Check if it's Right-Right or Right-Left
-		if t.right != nil && t.right.bf < 0 {
-			// Right-Left case
-			// Double rotation: Right(Z) then Left(X)
-			return rotateRightLeft(t), true
+	if n.bf > 1 { // Right-heavy
+		if n.right != nil && n.right.bf < 0 { // Right-Left case
+			return rotateRightLeft(n), true
 		}
 		// Right-Right case
-		return rotateLeft(t), true
-	} else if t.bf < -1 { // Left-heavy
-		// Check if it's Left-Right or Left-Left
-		if t.left != nil && t.left.bf > 0 {
-			// Left-Right case
-			// Double rotation: Left(Z) then Right(X)
-			return rotateLeftRight(t), true
+		return rotateLeft(n), true
+	} else if n.bf < -1 { // Left-heavy
+		if n.left != nil && n.left.bf > 0 { // Left-Right case
+			return rotateLeftRight(n), true
 		}
 		// Left-Left case
-		// Single rotation: Right(X)
-		return rotateRight(t), true
+		return rotateRight(n), true
 	}
 
-	return t, true
+	return n, true
 }
 
-// Insert inserts the node into the tree, growing as needed, and reports
-// if the operation was successful.
-// NOTE: This method doesn't handle root changes.
-// For proper AVL insertion that can change the root, use AVL.Insert() instead.
-func (t *avlNode[T]) Insert(v T) bool {
-	if t == nil {
+// Insert adds a value to the subtree rooted at the current node.
+// This method is provided to satisfy the BinaryTree[T] interface.
+// WARNING: This does not handle changes to the tree's root. For safe insertion,
+// always call Insert from the top-level AVL struct.
+func (n *avlNode[T]) Insert(v T) bool {
+	if n == nil {
 		return false
 	}
-
-	_, inserted := t.insertInternal(v)
-
+	_, inserted := n.insertInternal(v)
 	return inserted
 }
 
-// rotateLeft performs a left rotation around the given node.
-//
-// There are three common forms of transformation:
-//
-//	parent
-//	   \
-//	   [H] (+2)
-//	     \
-//	     [N] (+1)
-//	       \
-//	       [Z] (0)
-//
-// Which becomes:
-//
-//	   parent
-//	      \
-//	      [N] (0)
-//	      / \
-//	(0) [H] [Z] (0)
-//
-// Alternatively, this could be part of a double rotation where we
-// are only shifting the node and its child into a form that rotateRight
-// will then handle.
-//
-//	       parent
-//	         /
-//	  (-2) [C]
-//	       /
-//	(+1) [A]   <-- node
-//	      \
-//	  (0) [B]
-//
-// Which becomes:
-//
-//	        parent
-//	          /
-//	   (-2) [C]   <-- node
-//	        /
-//	 (-1) [B]
-//	      /
-//	(0) [A]
-//
-// And finally rotate left with children
-//
-//	       parent
-//	         /
-//	       [H] (+2)
-//	      /   \
-//	(0) [E]   [M] (+1)
-//	          / \
-//	    (0) [J] [S] (0)
-//
-// Which becomes:
-//
-//	       parent
-//	          \
-//	          [M] (0)
-//	         /   \
-//	  (0) [H]     [S] (0)
-//	      / \
-//	(0) [E] [J] (0)
-//
-// And once again balance is restored.
+// rotateLeft performs a left rotation on the subtree rooted at `node`.
+// This operation is used to rebalance the tree when a node becomes right-heavy.
+// It returns the new root of the rotated subtree.
 func rotateLeft[T constraints.Ordered](node *avlNode[T]) *avlNode[T] {
 	if node == nil || node.right == nil {
 		return node
 	}
-
-	// Save references
 	newRoot := node.right
 	subtree := newRoot.left
 
@@ -231,87 +144,20 @@ func rotateLeft[T constraints.Ordered](node *avlNode[T]) *avlNode[T] {
 		subtree.parent = node
 	}
 
-	// Update balance factors after rotation
+	// Update balance factors
 	node.bf = node.balanceFactor()
 	newRoot.bf = newRoot.balanceFactor()
 
-	// Return new root of rotated subtree
 	return newRoot
 }
 
-// rotateRight performs a right rotation around the given node.
-//
-// The most common form is:
-//
-//	       parent
-//	          /
-//	   (-2) [E]   <-- node
-//	        /
-//	 (-1) [C]
-//	      /
-//	(0) [A]
-//
-// Which becomes:
-//
-//	   parent
-//	      \
-//	      [C] (0)   <-- node
-//	      / \
-//	(0) [A] [E] (0)
-//
-// Alternatively, this could be part of a double rotation in which case there is
-// no grandchild node to handle, we are only shifting shuffling the node and
-// its child.
-//
-//	parent
-//	   \
-//	   [H] (+2)
-//	     \
-//	     [Z] (-1)   <-- node
-//	     /
-//	   [N] (0)
-//
-// Which becomes:
-//
-//	parent
-//	   \
-//	   [H] (_2)   <-- node
-//	     \
-//	     [N] (+1)
-//	       \
-//	       [Z] (0)
-//
-// And now the tree is ready for the rotateLeft to finish the balancing.
-//
-// The third form is rotate right with children
-//
-//	            parent
-//	              /
-//	      (-2)  [H]  <-- node
-//	           /   \
-//	    (-1) [E]   [J (0)
-//	         / \
-//	  (-1) [C] [F] (0)
-//	      /
-//	(0) [A]
-//
-// Which becomes:
-//
-//	          parent
-//	             /
-//	        (0) [E]  <-- node
-//	           /   \
-//	   (-1) [C]     [H] (0)
-//	       /        / \
-//	(0) [A] (0)   [F] [J] (0)
-//
-// And once again balance is restored.
+// rotateRight performs a right rotation on the subtree rooted at `node`.
+// This operation is used to rebalance the tree when a node becomes left-heavy.
+// It returns the new root of the rotated subtree.
 func rotateRight[T constraints.Ordered](node *avlNode[T]) *avlNode[T] {
 	if node == nil || node.left == nil {
 		return node
 	}
-
-	// Save references
 	newRoot := node.left
 	subtree := newRoot.right
 
@@ -326,193 +172,135 @@ func rotateRight[T constraints.Ordered](node *avlNode[T]) *avlNode[T] {
 		subtree.parent = node
 	}
 
-	// Update balance factors after rotation
+	// Update balance factors
 	node.bf = node.balanceFactor()
 	newRoot.bf = newRoot.balanceFactor()
 
 	return newRoot
 }
 
-// rotateRightLeft performs a double rotation: right rotation followed by
-// left rotation. This handles the Right-Left case in AVL rebalancing.
-//
-//	       Step 1:         Step 2:         Result:
-//
-//		      3               3               5
-//			 / \             / \             / \
-//			1   7    =>     1   5     =>    3   7
-//			   / \             / \         / \ / \
-//			  5   8           4   7       1  4 6  8
-//			 / \                 / \
-//			4   6               6   8
+// rotateRightLeft performs a double rotation to handle the "Right-Left" case.
+// It consists of a right rotation on the right child, followed by a left
+// rotation on the original node.
 func rotateRightLeft[T constraints.Ordered](node *avlNode[T]) *avlNode[T] {
 	if node == nil || node.right == nil {
 		return node
 	}
-
-	// First rotation: right rotation on node.right
 	node.right = rotateRight(node.right)
-	// Update parent pointer
 	if node.right != nil {
 		node.right.parent = node
 	}
-
-	// Second rotation: left rotation on node
 	return rotateLeft(node)
 }
 
-// rotateLeftRight performs a double rotation: left rotation
-// followed by right rotation.
-// This handles the Left-Right case in AVL rebalancing.
-//
-// Step 1:         Step 2:          Result:
-//
-//	        7             7               5
-//		   / \           / \             / \
-//		  3   8   =>    5   8     =>    3   7
-//		 / \           / \             / \ / \
-//		1   5         3   6           1  4 6  8
-//		   / \       / \
-//		  4   6     1   4
+// rotateLeftRight performs a double rotation to handle the "Left-Right" case.
+// It consists of a left rotation on the left child, followed by a right
+// rotation on the original node.
 func rotateLeftRight[T constraints.Ordered](node *avlNode[T]) *avlNode[T] {
 	if node == nil || node.left == nil {
 		return node
 	}
-
-	// First rotation: left rotation on node.left
 	node.left = rotateLeft(node.left)
-	// Update parent pointer
 	if node.left != nil {
 		node.left.parent = node
 	}
-
-	// Second rotation: right rotation on node
 	return rotateRight(node)
 }
 
-// Delete the requested node from the tree and reports if it was successful.
-// If the value is not in the tree, the tree is unchanged and false is returned.
-// If the node is not a leaf the trees internal structure may be updated.
-func (t *avlNode[T]) Delete(_ T) bool {
-	if t == nil {
-		return false
-	}
-
+// Delete removes a value from the subtree.
+// Note: This functionality is not yet implemented for avlNode.
+func (n *avlNode[T]) Delete(_ T) bool {
 	return false
 }
 
-// Search reports if the given value is in the tree.
-func (t *avlNode[T]) Search(v T) bool {
-	// If this (child) node is nil, then there is nothing to find.
-	if t == nil {
+// Search recursively looks for a value in the subtree rooted at the current node.
+// It returns true if the value is found, and false otherwise.
+func (n *avlNode[T]) Search(v T) bool {
+	if n == nil {
 		return false
 	}
-
-	if v == t.value {
+	if v == n.value {
 		return true
 	}
-
-	if v < t.value {
-		return t.left.Search(v)
+	if v < n.value {
+		return n.left.Search(v)
 	}
-
-	return t.right.Search(v)
+	return n.right.Search(v)
 }
 
-// Traverse traverses the tree in the specified order emitting the values to
-// the channel. Channel is closed once the final value is emitted.
-//
-// NOTE: Nodes in general are not expected to initiate the traverse. It would
-// normally be kicked off by the main container type, e.g., AVL not avlNode.
-func (t *avlNode[T]) Traverse(tOrder TraverseOrder) <-chan T {
+// Traverse traverses the subtree rooted at this node.
+// This method is provided to satisfy the BinaryTree[T] interface. Traversal is
+// typically initiated from the main tree structure (e.g., AVL).
+func (n *avlNode[T]) Traverse(tOrder TraverseOrder) <-chan T {
 	ch := make(chan T)
-
-	// If the node is nil that we are trying to traverse, return the channel,
-	// but close it off since there is no way to have anything to send.
-	if t == nil {
-		defer close(ch)
-
-		return ch
-	}
-
 	go func() {
-		traverseBinaryTree(t, tOrder, ch)
-		close(ch)
+		defer close(ch)
+		if n != nil {
+			traverseBinaryTree(n, tOrder, ch)
+		}
 	}()
-
 	return ch
 }
 
-// Height returns the height of the longest path in the tree from the
-// root node to the farthest leaf.
-func (t *avlNode[T]) Height() int {
-	if t == nil {
+// Height calculates the height of the subtree rooted at the current node.
+// A single node has a height of 1. An empty (nil) node has a height of 0.
+func (n *avlNode[T]) Height() int {
+	if n == nil {
 		return 0
 	}
-
-	lHeight := t.left.Height()
-	rHeight := t.right.Height()
-
+	lHeight := n.left.Height()
+	rHeight := n.right.Height()
 	if lHeight > rHeight {
 		return lHeight + 1
 	}
-
 	return rHeight + 1
 }
 
-// toTestString prints out this node with all its properties and children as a
-// formatted Go value ready to copy and paste into test code. The parent
-// pointer is not set here because it is created when the variable
-// is instantiated. The indent param tells how deep in the tree we are so the
-// value comes out already gofmt'ed.
-func (t *avlNode[T]) toTestString(buf *bytes.Buffer, indent int) {
-	// testIndents is a sequence of tab characaters that are to be substringed
-	// at the necessary level for proper indenting of node text.
+// toTestString is an internal helper function used for testing. It generates a
+// string representation of the node structure that can be used in test cases.
+func (n *avlNode[T]) toTestString(buf *bytes.Buffer, indent int) {
 	const testIndents = "\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t"
+	fmt.Fprintf(buf, "%svalue: %v,\n", testIndents[:indent], n.value)
+	fmt.Fprintf(buf, "%sbf: %d,\n", testIndents[:indent], n.bf)
 
-	fmt.Fprintf(buf, "%svalue: %v,\n", testIndents[:indent], t.value)
-	fmt.Fprintf(buf, "%sbf: %d,\n", testIndents[:indent], t.bf)
-
-	if t.left != nil {
+	if n.left != nil {
 		buf.WriteString(testIndents[:indent] + "left: &avlNode[T]{\n")
-		t.left.toTestString(buf, indent+1)
+		n.left.toTestString(buf, indent+1)
 		buf.WriteString(testIndents[:indent] + "},\n")
 	}
 
-	if t.right != nil {
+	if n.right != nil {
 		buf.WriteString(testIndents[:indent] + "right: &avlNode[T]{\n")
-		t.right.toTestString(buf, indent+1)
+		n.right.toTestString(buf, indent+1)
 		buf.WriteString(testIndents[:indent] + "},\n")
 	}
 }
 
-// Clone creates a deep copy of this AVL node and its subtree.
-func (t *avlNode[T]) Clone() Tree[T] {
-	if t == nil {
+// Clone creates a deep copy of the node and its entire subtree.
+// It returns the new node, satisfying the Tree[T] interface.
+// Parent pointers are re-established during the cloning process.
+func (n *avlNode[T]) Clone() Tree[T] {
+	if n == nil {
 		return nil
 	}
 
 	clone := &avlNode[T]{
-		value:  t.value,
-		bf:     t.bf,
-		parent: nil, // Parent will be set during tree construction
-		left:   nil,
-		right:  nil,
+		value: n.value,
+		bf:    n.bf,
 	}
 
-	if t.left != nil {
-		if leftClone, ok := t.left.Clone().(*avlNode[T]); ok {
+	if n.left != nil {
+		if leftClone, ok := n.left.Clone().(*avlNode[T]); ok {
 			clone.left = leftClone
 			leftClone.parent = clone
 		}
 	}
 
-	if t.right != nil {
-		if rightClone, ok := t.right.Clone().(*avlNode[T]); ok {
+	if n.right != nil {
+		if rightClone, ok := n.right.Clone().(*avlNode[T]); ok {
 			clone.right = rightClone
 			rightClone.parent = clone
 		}
 	}
-
 	return clone
 }

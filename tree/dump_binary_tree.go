@@ -7,283 +7,136 @@ import (
 	"golang.org/x/exp/constraints"
 )
 
-// TODO(rsned): A list of potential enhancements.
-//
-// * Find widest node value to be able to change the overall height and width of
-//   the output tree. Shorter values/strings don't need as tall or wide of a tree.
-// * Find the breadth of a given subtree and use it to adjust the lateral width
-//   of higher up nodes.  e.g. when one side of a tree is not bushy, or is
-//   unbalanced, there is no need for lateral padding on higher nodes.
-// * Allow for pseudo-dynamic heights based on width of largest element in the tree.
-//   e.g. if the tree only has single letter / digit values, a leg height of 2-3
-//   would be plenty.
-// * Format a nodes content to be centered in the alloted space rather than left
-//   or right aligned.
-// * Node value and metadata printing are basically identical code blocks, figure
-//   out a way to refactor that.
+// This file contains the logic for rendering a visual representation of a
+// binary tree as an ASCII string. It is primarily used for debugging and
+// educational purposes to visualize the structure of a tree.
 
 const (
+	// Basic string components for building the tree structure.
 	indent      = "     "
 	nodeFmt     = "%-3v"
 	nodeMetaFmt = "%5s"
+	underbar    = "_____"
 
-	// These are the constant strings used for rendering leg segements of
-	// the given depth.
+	// Leg segments for drawing connector lines between nodes.
 	leftRow1  = "/"
 	leftRow2  = "/ "
 	leftRow3  = "/  "
-	leftRow4  = "/   "
-	leftRow5  = "/    "
-	leftRow6  = "/     "
-	leftRow7  = "/      "
 	rightRow1 = "\\"
 	rightRow2 = " \\"
 	rightRow3 = "  \\"
-	rightRow4 = "   \\"
-	rightRow5 = "    \\"
-	rightRow6 = "     \\"
-	rightRow7 = "      \\"
-	underbar  = "_____"
 )
 
-// maxPadding is how long to make the pad strings we substring against.
+// maxPadding defines the pre-allocated size for repeated string patterns
+// to optimize rendering performance by avoiding repeated string concatenation.
 const maxPadding = 2048
 
 var (
-	// leftLegs is a slice of the angled leg strings in order to be
-	// iterated over at each level to make the render function cleaner.
-	leftLegs = []string{
-		leftRow1,
-		leftRow2,
-		leftRow3,
-		leftRow4,
-		leftRow5,
-		leftRow6,
-		leftRow7,
-	}
+	// Slices of leg strings for different depths, allowing for easy iteration.
+	leftLegs  = []string{leftRow1, leftRow2, leftRow3}
+	rightLegs = []string{rightRow1, rightRow2, rightRow3}
 
-	// the corresponding right angled leg strings.
-	rightLegs = []string{
-		rightRow1,
-		rightRow2,
-		rightRow3,
-		rightRow4,
-		rightRow5,
-		rightRow6,
-		rightRow7,
-	}
-
-	// Thise are constructed to allow substring instead of looping repeatedly
-	// when multiple instances are needed in a row.
+	// Pre-built strings for padding, used via substring operations for efficiency.
 	underbarFull = strings.Repeat(underbar, maxPadding)
 	indentFull   = strings.Repeat(indent, maxPadding)
-
-	// The remaining are defined separately even though they use the same
-	// string normally. This allows debugging by tweaking the given character
-	// so we can see it in outputs.
-	prefixPad   = strings.Repeat(" ", maxPadding) // Switch to 'P' for debug.
-	shoulderPad = strings.Repeat(" ", maxPadding) // Switch to 'S' for debug.
-	interPad    = strings.Repeat(" ", maxPadding) // Switch to 'I' for debug.
-	intraPad    = strings.Repeat(" ", maxPadding) // Switch to 'i' for debug.
-	otherPad    = strings.Repeat(" ", maxPadding) // Switch to '#' for debug.
-	otherPad2   = strings.Repeat(" ", maxPadding) // Switch to '$' for debug.
-	legPad      = strings.Repeat(" ", maxPadding) // Switch to 'L' for debug.
+	prefixPad    = strings.Repeat(" ", maxPadding)
+	shoulderPad  = strings.Repeat(" ", maxPadding)
+	interPad     = strings.Repeat(" ", maxPadding)
+	intraPad     = strings.Repeat(" ", maxPadding)
+	legPad       = strings.Repeat(" ", maxPadding)
 )
 
-// indentOptions tracks the spacings used at a given depth and tree height for
-// a given node width.
-//
-// Using the following tree as an example to point out which fields represent
-// which parts of this struct.
-//
-//	P = prefixPad
-//	S = shoulderPad
-//	I = interPad
-//	i = intraPad AKA node width
-//	L = legPad (Usually only 1, but some variations of the tool used more
-//	    vertical space for higher levels to shorten shoulders)
-//
-// | <- Edge of output area.
-// |
-// |                 __________500__________
-// |                /                       \
-// |          ___250___                   ___750___
-// |         /         \                 /         \
-// |      125           375           625           875
-// |     /   \         /   \         /   \         /   \
-// |  100     187   225     425   123     321   123     999
-//
-// | <- Edge of output area.
-// |
-// |PPPPPPPPPPPPPPPPL__________500__________L
-// |                /SSSSSSSSSSiiiSSSSSSSSSS\
-// |PPPPPPPPPL___250___                   ___750___
-// |PPPPPPPPP/SSSiiiSSS\                 /SSSiiiSSS\
-// |PPPPPL125LSSSiiiSSSL375LIIIIIIIIIL625LSSSiiiSSSL875
-// |PPPPP/iii\IIIIIIIII/iii\         /   \         /   \
-// |PP100LiiiL187III225LiiiL425III123LiiiL321III123LiiiL999
-// |
+// indentOptions defines the spacing and padding parameters used at a given
+// depth of the tree to ensure proper alignment and a visually clear layout.
+// The fields correspond to different padding areas around and between nodes.
 type indentOptions struct {
-	// nodeWidth is how wide in number of spaces this node value will be.
-	nodeWidth int
-
-	// prefixPadding is how much spacing to start the beginning of a line with.
-	// This is to shift the entire output over. It is not the leading space on
-	// rows higher up the tree that do not start flush with the left side of the
-	// output area.
-	//
-	// Element 'P' in the diagram above.
-	//
-	// This is measured in spaces.
-	prefixPadding int
-
-	// intraNodePadding is the spacing between the left and right legs of the
-	// tree. Generally this matches the nodeWidth, but it can be less if the
-	// tree is trying to be more densely rendered. (Or more to be more
-	// cushion-y which will bump up the shoulderPadding at each level.)
-	//
-	// Element 'i' in the diagram above.
-	//
-	// This is measured in spaces.
-	intraNodePadding int
-
-	// interTreePadding is the spacing between each set of trees at this level.
-	// This is usually less than the intraNodePadding and nodeWidth and
-	// primarily affects the shoulder spacing on higher up levels.
-	//
-	// Element 'I' in the diagram above.
-	//
-	// This is measured in units of spaces.
-	interTreePadding int
-
-	// shoulderPadding is how much lateral filler we need between the top of a
-	// leg and the current level's node text. (rather than growing the diagonal
-	// 2^n vertically, we limit it to one vertical level and then go sideways
-	// to make up the space needed to get it into position.)
-	//
-	// Element 'S' in the diagram above.
-	//
-	// This is in spaces.
-	shoulderPadding int
-
-	// legDepth tracks how tall the legs are between the current level and the
-	// level above it. Mostly this value is 1 because we are focusing on
-	// compact vertical spacing. Larger values can generate a more artisinal
-	// feel.
-	//
-	// There are no hard upper limits, but going beyond 5 really strains the
-	// visual sensibilities.
-	legDepth int
+	nodeWidth        int // Width of the node's value representation.
+	prefixPadding    int // Initial padding for the entire line.
+	intraNodePadding int // Padding between the legs of a single node.
+	interTreePadding int // Padding between different subtrees at the same level.
+	shoulderPadding  int // Horizontal padding to align nodes under their parents.
+	legDepth         int // Vertical height of the connector legs.
 }
 
-// RenderMode is an enum for output formats when printing out trees.
+// RenderMode specifies the output format for tree visualization.
 type RenderMode int
 
-// Set of current render modes.
 const (
-	ModeASCII RenderMode = iota // Also the default value.
-	ModeSVG
-
-	// TODO(rsned): Add more modes?
+	ModeASCII RenderMode = iota // Default mode, renders as plain text ASCII art.
+	ModeSVG                     // Renders as a Scalable Vector Graphic (not implemented).
 )
 
-// RenderBinaryTree returns the given tree in the given mode rendered into string form.
+// RenderBinaryTree generates a string representation of a binary tree in the
+// specified mode. Currently, only ASCII mode is implemented.
 func RenderBinaryTree[T constraints.Ordered](t BinaryTree[T], _ int, mode RenderMode) string {
 	switch mode {
 	case ModeASCII:
 		return PrintBinaryTreeASCII("", t)
 	case ModeSVG:
-		return "SVG method not implemented yet"
+		return "SVG rendering is not yet implemented."
 	default:
-		return "Unknown render mode not implemented yet"
+		return "Unknown render mode."
 	}
 }
 
-// maxNodeWidth is the maximum supported width of a node value that
-// can be printed.
+// maxNodeWidth sets the maximum supported width for a node's value string.
+// Values wider than this may not render correctly.
 const maxNodeWidth = 11
 
+// indentOptsForNodeWidth retrieves the appropriate indentation and spacing
+// configuration for a given node value width from a pre-computed data table.
 func indentOptsForNodeWidth(width int) indentOptionsMap {
-	// Ensure width is within valid bounds [1, maxNodeWidth] to prevent
-	// index errors.
 	if width < 1 {
 		width = 1
 	} else if width > maxNodeWidth {
 		width = maxNodeWidth
 	}
-
+	// The spacing data is indexed by width, with adjustments for odd/even widths.
 	return binaryTreeSpacingData[width+(width+1)%2]
 }
 
-// generateLevelsNodes returns a potentially sparse slice of Nodes at the
-// next level in the tree based on the current slice of tree Nodes. Nil
-// Nodes and any nil children are replaced with nils as placeholders in
-// the output.
-//
-// This slice should be a sparse slice of size 2*N, where N is the number
-// of nodes from the previous level.
+// generateLevelsNodes creates a slice representing the next level of the tree
+// based on the nodes in the current level. It preserves the tree structure by
+// using nil placeholders for missing children, resulting in a sparse slice.
 func generateLevelsNodes[T constraints.Ordered](existing []BinaryTree[T]) []BinaryTree[T] {
-	nodes := []BinaryTree[T]{}
+	nodes := make([]BinaryTree[T], 0, len(existing)*2)
 	for _, n := range existing {
-		if n != nil {
-			if n.HasLeft() {
-				nodes = append(nodes, n.Left())
-			} else {
-				nodes = append(nodes, nil)
-			}
-			if n.HasRight() {
-				nodes = append(nodes, n.Right())
-			} else {
-				nodes = append(nodes, nil)
-			}
+		if !isTreeNil(n) {
+			nodes = append(nodes, n.Left(), n.Right())
 		} else {
-			// If the current node was nil (i.e. an unbalanced
-			// tree in progress), we output two blank filler entries
-			// for its non-existent children.
-			nodes = append(nodes, nil)
-			nodes = append(nodes, nil)
+			// Add placeholders for children of a nil node to maintain spacing.
+			nodes = append(nodes, nil, nil)
 		}
 	}
-
 	return nodes
 }
 
-// lastNonNilNode walks backward through the list looking for the farthest
-// right non-nil node to know when the current row can break early in
-// processing.
+// lastNonNilNode finds the index of the rightmost non-nil node in a level.
+// This is an optimization to avoid rendering unnecessary trailing spaces.
 func lastNonNilNode[T constraints.Ordered](nodes []BinaryTree[T]) int {
 	for i := len(nodes) - 1; i >= 0; i-- {
-		if nodes[i] != nil {
+		if !isTreeNil(nodes[i]) {
 			return i
 		}
 	}
-
-	return 0
+	return -1 // Indicates an entirely nil level.
 }
 
-// centerString centers the given string into the target size adjusting
-// the space at either end as needed with the given pad character.
+// centerString centers a string `s` within a given `width` by padding it
+// with the specified `padChar`. If the string is longer than the width, it
+// is returned unchanged.
 func centerString(s, padChar string, width int) string {
 	s = strings.TrimSpace(s)
 	l := len(s)
-
-	// For now, there is no attempt to truncate or elide longer values.
 	if l >= width {
 		return s
 	}
-
-	// Calculate padding: for uneven splits, put the extra space on the right
-	// This matches the test expectations where width 2 with "a" becomes "a "
 	lPad := (width - l) / 2
 	rPad := width - l - lPad
-
-	// Create padding strings using the provided padChar
-	leftPadding := strings.Repeat(padChar, lPad)
-	rightPadding := strings.Repeat(padChar, rPad)
-
-	return leftPadding + s + rightPadding
+	return strings.Repeat(padChar, lPad) + s + strings.Repeat(padChar, rPad)
 }
 
+// dumpTreeStats holds metrics about a tree's structure, used to guide rendering.
 type dumpTreeStats struct {
 	height      int
 	leftHeight  int
@@ -291,15 +144,14 @@ type dumpTreeStats struct {
 	widestValue int
 }
 
-// analyzeTree takes the givern tree and attempts to find out relevant details
-// about it to assist in the rendering.
+// analyzeTree traverses a tree to gather statistics like height and the width
+// of the widest node value. These stats help in formatting the ASCII output.
 func analyzeTree[T constraints.Ordered](tree BinaryTree[T]) dumpTreeStats {
-	stats := dumpTreeStats{
-		height:      tree.Height(),
-		leftHeight:  0,
-		rightHeight: 0,
-		widestValue: 0,
+	if isTreeNil(tree) {
+		return dumpTreeStats{}
 	}
+
+	stats := dumpTreeStats{height: tree.Height()}
 	if tree.HasLeft() {
 		stats.leftHeight = tree.Left().Height()
 	}
@@ -307,37 +159,14 @@ func analyzeTree[T constraints.Ordered](tree BinaryTree[T]) dumpTreeStats {
 		stats.rightHeight = tree.Right().Height()
 	}
 
-	// things we want to find out:
-	// max height
-	// width of largest value
-	// lopsidedness / skew   e.g. is this only a one sided binary tree?
-
-	// Walk the tree getting all values and printing them as strings in order
-	// to find the widest, min, max, mean, etc.
-	ch := tree.Traverse(TraverseInOrder)
-
 	var widest int
-	var minVal, maxVal T
-
-	for {
-		val, ok := <-ch
-		if ok {
-			s := fmt.Sprintf("%v", val)
-			if len(s) > widest {
-				widest = len(s)
-			}
-			if val < minVal {
-				minVal = val
-			}
-			if val > maxVal {
-				maxVal = val
-			}
-		} else {
-			break
+	ch := tree.Traverse(TraverseLevelOrder) // Level order is efficient for this.
+	for val := range ch {
+		s := fmt.Sprintf("%v", val)
+		if len(s) > widest {
+			widest = len(s)
 		}
 	}
-
 	stats.widestValue = widest
-
 	return stats
 }
