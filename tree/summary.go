@@ -10,50 +10,6 @@ import (
 
 const treeTypeUnknown = "Unknown"
 
-// BalanceQuality is a enum for the balance quality of a tree.
-// It is an arbitrary set of values ranging from Well Balanced to
-// Severely Right/Left Heavy. The change over points are chosen by
-// me to what feels reasonable.
-type BalanceQuality int
-
-const (
-	BalanceUnknown BalanceQuality = iota
-	SeverelyLeftHeavy
-	ModeratelyLeftHeavy
-	SlightlyLeftHeavy
-	WellBalanced
-	SlightlyRightHeavy
-	ModeratelyRightHeavy
-	SeverelyRightHeavy
-	Degenerate // Essentially a linked list
-)
-
-// balanceQualityString converts BalanceQuality enum to string
-func balanceQualityString(bq BalanceQuality) string {
-	switch bq {
-	case BalanceUnknown:
-		return treeTypeUnknown
-	case SeverelyLeftHeavy:
-		return "Severely Left Heavy"
-	case ModeratelyLeftHeavy:
-		return "Moderately Left Heavy"
-	case SlightlyLeftHeavy:
-		return "Slightly Left Heavy"
-	case WellBalanced:
-		return "Well Balanced"
-	case SlightlyRightHeavy:
-		return "Slightly Right Heavy"
-	case ModeratelyRightHeavy:
-		return "Moderately Right Heavy"
-	case SeverelyRightHeavy:
-		return "Severely Right Heavy"
-	case Degenerate:
-		return "Degenerate (Linear)"
-	default:
-		return treeTypeUnknown
-	}
-}
-
 // Summary contains comprehensive statistics and analysis of a Tree's
 // data structure to help understand its characteristics at a glance.
 type Summary[T constraints.Ordered] struct {
@@ -75,6 +31,28 @@ type Summary[T constraints.Ordered] struct {
 	heightEfficiency float64        // Ratio of optimal to actual height [0 to 1.0]
 
 	// TODO(rsned): Add more fields of interest.
+}
+
+// zeroValue returns the zero value for the given type
+func zeroValue[T constraints.Ordered]() T {
+	return *new(T)
+}
+
+// newSummary creates a new instance of a Summary ready to be filled.
+func newSummary[T constraints.Ordered]() *Summary[T] {
+	return &Summary[T]{
+		treeType:         treeTypeUnknown,
+		nodeCount:        0,
+		height:           0,
+		isEmpty:          true,
+		minValue:         zeroValue[T](),
+		maxValue:         zeroValue[T](),
+		hasValues:        false,
+		balanceQuality:   BalanceUnknown,
+		balanceScore:     0.0,
+		optimalHeight:    0,
+		heightEfficiency: 0.0,
+	}
 }
 
 // TreeType returns the type of tree (BST, AVL, RedBlack, etc.)
@@ -142,7 +120,17 @@ func (ts *Summary[T]) String() string {
 
 	if !ts.isEmpty {
 		sb.WriteString(fmt.Sprintf("Nodes: %d\n", ts.nodeCount))
-		sb.WriteString(fmt.Sprintf("Height: %d\n", ts.height))
+		sb.WriteString(fmt.Sprintf("Height: %d (optimal: %d)\n", ts.height, ts.optimalHeight))
+		sb.WriteString(fmt.Sprintf("Height Efficiency: %.1f%%\n", ts.heightEfficiency*100))
+
+		if ts.hasValues {
+			sb.WriteString(fmt.Sprintf("Value Range: %v to %v\n", ts.minValue, ts.maxValue))
+		}
+
+		sb.WriteString("\n=== Balance Analysis ===\n")
+		sb.WriteString(fmt.Sprintf("Balance Quality: %s\n", ts.balanceQuality.String()))
+		sb.WriteString(fmt.Sprintf("Balance Score: %.3f\n", ts.balanceScore))
+		sb.WriteString(BalanceQualityGraph(ts.balanceScore) + "\n")
 	}
 
 	return sb.String()
@@ -167,6 +155,7 @@ func determineTreeType[T constraints.Ordered](tree Tree[T]) string {
 // This method is not thread-safe as the Tree could be modified during the
 // traversing of the tree leading to inconsistent results.
 func calculateBasicMetrics[T constraints.Ordered](tree Tree[T], summary *Summary[T]) {
+	summary.height = tree.Height()
 	// Check if tree is empty first (avoids interface nil pointer issues)
 	if tree.Height() == 0 {
 		return
@@ -206,5 +195,8 @@ func calculateBasicMetrics[T constraints.Ordered](tree Tree[T], summary *Summary
 		if summary.height > 0 {
 			summary.heightEfficiency = float64(summary.optimalHeight) / float64(summary.height)
 		}
+	}
+	if summary.height > 0 {
+		summary.isEmpty = false
 	}
 }

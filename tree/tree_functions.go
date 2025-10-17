@@ -204,10 +204,12 @@ func Equivalent[T constraints.Ordered](a, b Tree[T], opts ...OptionFunc) bool {
 
 // Summarize takes a tree and returns comprehensive statistics and analysis
 // about the tree structure, balance, performance characteristics, and more.
-func Summarize[T constraints.Ordered](_ Tree[T]) *Summary[T] {
-	var summary *Summary[T]
+func Summarize[T constraints.Ordered](tree Tree[T]) *Summary[T] {
+	summary := newSummary[T]()
 
-	// TODO(rsned): Implement this.
+	calculateBasicMetrics(tree, summary)
+
+	// TODO(rsned): Implement more.
 
 	return summary
 }

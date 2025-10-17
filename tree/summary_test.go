@@ -230,3 +230,32 @@ func TestCalculateBasicMetrics(t *testing.T) {
 		})
 	}
 }
+
+// testSummaryString dumps the String method of the Summary struct.
+func testSummaryString(t *testing.T) {
+	t.Helper()
+	tests := []struct {
+		name string
+		tree Tree[int]
+		want string
+	}{
+		{name: "EmptyBST", tree: emptyBST, want: "Empty BST"},
+		{name: "EmptyAVL", tree: emptyAVL, want: "Empty AVL"},
+		{name: "EmptyRedBlack", tree: emptyRedBlack, want: "Empty RedBlack"},
+		{name: "SimpleBST", tree: simpleBST, want: "Simple BST"},
+		{name: "SimpleAVL", tree: simpleAVL, want: "Simple AVL"},
+		{name: "SimpleRedBlack", tree: simpleRedBlack, want: "Simple RedBlack"},
+		{name: "DeepBST", tree: deepBST, want: "Deep BST"},
+		{name: "DeepAVL", tree: deepAVL, want: "Deep AVL"},
+		{name: "DeepRedBlack", tree: deepRedBlack, want: "Deep RedBlack"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			summary := Summarize(tt.tree)
+			t.Errorf(PrintTreeASCII(tt.name, tt.tree) + "\n")
+			if summary.String() != tt.want {
+				t.Errorf("SummaryString = \n%s\nwant: %s", summary.String(), tt.want)
+			}
+		})
+	}
+}
