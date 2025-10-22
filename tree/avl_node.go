@@ -49,10 +49,36 @@ func (t *avlNode[T]) Value() T {
 	return t.value
 }
 
+const (
+	balanceFactorSuperscript2    = "²"
+	balanceFactorSuperscript1    = "¹"
+	balanceFactorSuperscript0    = "⁰"
+	balanceFactorSuperscriptNeg1 = "⁻¹"
+	balanceFactorSuperscriptNeg2 = "⁻²"
+	balanceFactorSubscript2      = "₂"
+	balanceFactorSubscript1      = "₁"
+	balanceFactorSubscript0      = "₀"
+	balanceFactorSubscriptNeg1   = "₋₁"
+	balanceFactorSubscriptNeg2   = "₋₂"
+)
+
 // Metadata returns a string of metadata about this node.
 // For AVL tree, this is the balance factor of the node.
 func (t *avlNode[T]) Metadata() string {
-	return fmt.Sprintf("(%d)", t.bf)
+	switch t.bf {
+	case 2:
+		return balanceFactorSubscript2
+	case 1:
+		return balanceFactorSubscript1
+	case 0:
+		return balanceFactorSubscript0
+	case -1:
+		return balanceFactorSubscriptNeg1
+	case -2:
+		return balanceFactorSubscriptNeg2
+	default:
+		return fmt.Sprintf("(%d)", t.bf)
+	}
 }
 
 // balanceFactor returns the nodes balance factor.

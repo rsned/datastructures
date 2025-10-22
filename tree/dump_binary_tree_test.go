@@ -173,12 +173,17 @@ func TestCenterString(t *testing.T) {
 			width: 10,
 			want:  "    a     ",
 		},
+		{
+			have:  balanceFactorSubscriptNeg2,
+			width: 10,
+			want:  "    ₋₂    ",
+		},
 	}
 
 	for _, test := range tests {
 		// TODO(rsned): replace spaces with the padChar
 		if got := centerString(test.have, " ", test.width); got != test.want {
-			t.Errorf("centerString(%q, %d) = %q, want %q", test.have, test.width, got, test.want)
+			t.Errorf("centerString(%q, %d) = %q, want %q   len(s)=%d", test.have, test.width, got, test.want, len(test.have))
 		}
 	}
 }

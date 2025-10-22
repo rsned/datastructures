@@ -3,6 +3,7 @@ package tree
 import (
 	"fmt"
 	"strings"
+	"unicode/utf8"
 
 	"golang.org/x/exp/constraints"
 )
@@ -265,7 +266,7 @@ func lastNonNilNode[T constraints.Ordered](nodes []BinaryTree[T]) int {
 // the space at either end as needed with the given pad character.
 func centerString(s, padChar string, width int) string {
 	s = strings.TrimSpace(s)
-	l := len(s)
+	l := utf8.RuneCountInString(s)
 
 	// For now, there is no attempt to truncate or elide longer values.
 	if l >= width {
