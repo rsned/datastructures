@@ -14,6 +14,12 @@ var (
 	emptyRedBlack = NewRedBlack[int]()
 )
 
+var (
+	singleNodeBST      = NewBST[int]()
+	singleNodeAVL      = NewAVL[int]()
+	singleNodeRedBlack = NewRedBlack[int]()
+)
+
 // Simple trees - one of each type with 3 nodes
 var (
 	simpleBST      Tree[int]
@@ -33,6 +39,10 @@ var (
 
 // init creates the various test trees
 func init() {
+	singleNodeBST.Insert(5)
+	singleNodeAVL.Insert(5)
+	singleNodeRedBlack.Insert(5)
+
 	// Simple Tree: 3 nodes
 	//       10
 	//      /  \
