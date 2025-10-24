@@ -179,6 +179,65 @@ func rotateLeftRedBlack[T constraints.Ordered](node *redBlackNode[T]) *redBlackN
 	return newRoot
 }
 
+// rotateRightRedBlack performs a right rotation around the given node to
+// rebalance but does NOT recolor the nodes.
+//
+// When the newly inserted node's "uncle" (the sibling of the parent node) is
+// red, you can often fix by recoloring. If the uncle is black or nil, you
+// need to perform a rotation.
+//
+// Example: Insert 10 into this tree.
+//
+//	   [30]          [30]
+//	   /             /
+//	(20)   ==>     (20)
+//	               /
+//	              (10)
+//
+// Parent (20) is red, Uncle is nil (considered black)
+// This is a left-left case: 20 is the left child of 30, and 10 is the
+// left child of 20
+// Fix needed: Right rotation on node 20
+//
+// The right rotation makes 20 the new root of this subtree, with 10 as its
+// left child and 30 becoming its right child:
+//
+//	   (20)
+//	  /    \
+//	[10]   (30)
+func rotateRightRedBlack[T constraints.Ordered](node *redBlackNode[T]) *redBlackNode[T] {
+	if node == nil || node.left == nil {
+		return node
+	}
+
+	// The new root will be the left pointer.
+	newRoot := node.left
+	// Save any existing right subtree
+	subtree := newRoot.right
+
+	// Perform the rotation
+	newRoot.right = node
+	node.left = subtree
+
+	// Update parent pointers
+	newRoot.parent = node.parent
+	node.parent = newRoot
+	if subtree != nil {
+		subtree.parent = node
+	}
+
+	// Update parent's child pointer if it exists
+	if newRoot.parent != nil {
+		if newRoot.parent.left == node {
+			newRoot.parent.left = newRoot
+		} else {
+			newRoot.parent.right = newRoot
+		}
+	}
+
+	return newRoot
+}
+
 // findNodeRedBlack searches for a node with the given value in the tree.
 // Returns the node's pointer if found, or nil otherwise.
 func findNodeRedBlack[T constraints.Ordered](root *redBlackNode[T], value T) *redBlackNode[T] {
