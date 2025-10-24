@@ -141,20 +141,20 @@ func (t *avlNode[T]) insertInternal(v T) (*avlNode[T], bool) {
 		if t.right != nil && t.right.bf < 0 {
 			// Right-Left case
 			// Double rotation: Right(Z) then Left(X)
-			return rotateRightLeft(t), true
+			return rotateRightLeftAVL(t), true
 		}
 		// Right-Right case
-		return rotateLeft(t), true
+		return rotateLeftAVL(t), true
 	} else if t.bf < -1 { // Left-heavy
 		// Check if it's Left-Right or Left-Left
 		if t.left != nil && t.left.bf > 0 {
 			// Left-Right case
 			// Double rotation: Left(Z) then Right(X)
-			return rotateLeftRight(t), true
+			return rotateLeftRightAVL(t), true
 		}
 		// Left-Left case
 		// Single rotation: Right(X)
-		return rotateRight(t), true
+		return rotateRightAVL(t), true
 	}
 
 	return t, true
@@ -174,7 +174,7 @@ func (t *avlNode[T]) Insert(v T) bool {
 	return inserted
 }
 
-// rotateLeft performs a left rotation around the given node.
+// rotateLeftAVL performs a left rotation around the given node.
 //
 // There are three common forms of transformation:
 //
@@ -237,7 +237,7 @@ func (t *avlNode[T]) Insert(v T) bool {
 //	(0) [E] [J] (0)
 //
 // And once again balance is restored.
-func rotateLeft[T constraints.Ordered](node *avlNode[T]) *avlNode[T] {
+func rotateLeftAVL[T constraints.Ordered](node *avlNode[T]) *avlNode[T] {
 	if node == nil || node.right == nil {
 		return node
 	}
@@ -265,7 +265,7 @@ func rotateLeft[T constraints.Ordered](node *avlNode[T]) *avlNode[T] {
 	return newRoot
 }
 
-// rotateRight performs a right rotation around the given node.
+// rotateRightAVL performs a right rotation around the given node.
 //
 // The most common form is:
 //
@@ -332,7 +332,7 @@ func rotateLeft[T constraints.Ordered](node *avlNode[T]) *avlNode[T] {
 //	(0) [A] (0)   [F] [J] (0)
 //
 // And once again balance is restored.
-func rotateRight[T constraints.Ordered](node *avlNode[T]) *avlNode[T] {
+func rotateRightAVL[T constraints.Ordered](node *avlNode[T]) *avlNode[T] {
 	if node == nil || node.left == nil {
 		return node
 	}
@@ -359,7 +359,7 @@ func rotateRight[T constraints.Ordered](node *avlNode[T]) *avlNode[T] {
 	return newRoot
 }
 
-// rotateRightLeft performs a double rotation: right rotation followed by
+// rotateRightLeftAVL performs a double rotation: right rotation followed by
 // left rotation. This handles the Right-Left case in AVL rebalancing.
 //
 //	       Step 1:         Step 2:         Result:
@@ -371,23 +371,23 @@ func rotateRight[T constraints.Ordered](node *avlNode[T]) *avlNode[T] {
 //			  5   8           4   7       1  4 6  8
 //			 / \                 / \
 //			4   6               6   8
-func rotateRightLeft[T constraints.Ordered](node *avlNode[T]) *avlNode[T] {
+func rotateRightLeftAVL[T constraints.Ordered](node *avlNode[T]) *avlNode[T] {
 	if node == nil || node.right == nil {
 		return node
 	}
 
 	// First rotation: right rotation on node.right
-	node.right = rotateRight(node.right)
+	node.right = rotateRightAVL(node.right)
 	// Update parent pointer
 	if node.right != nil {
 		node.right.parent = node
 	}
 
 	// Second rotation: left rotation on node
-	return rotateLeft(node)
+	return rotateLeftAVL(node)
 }
 
-// rotateLeftRight performs a double rotation: left rotation
+// rotateLeftRightAVL performs a double rotation: left rotation
 // followed by right rotation.
 // This handles the Left-Right case in AVL rebalancing.
 //
@@ -400,20 +400,20 @@ func rotateRightLeft[T constraints.Ordered](node *avlNode[T]) *avlNode[T] {
 //		1   5         3   6           1  4 6  8
 //		   / \       / \
 //		  4   6     1   4
-func rotateLeftRight[T constraints.Ordered](node *avlNode[T]) *avlNode[T] {
+func rotateLeftRightAVL[T constraints.Ordered](node *avlNode[T]) *avlNode[T] {
 	if node == nil || node.left == nil {
 		return node
 	}
 
 	// First rotation: left rotation on node.left
-	node.left = rotateLeft(node.left)
+	node.left = rotateLeftAVL(node.left)
 	// Update parent pointer
 	if node.left != nil {
 		node.left.parent = node
 	}
 
 	// Second rotation: right rotation on node
-	return rotateRight(node)
+	return rotateRightAVL(node)
 }
 
 // Delete the requested node from the tree and reports if it was successful.
