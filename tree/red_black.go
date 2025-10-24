@@ -4,7 +4,24 @@ import "golang.org/x/exp/constraints"
 
 const treeTypeRedBlack = "Red-Black"
 
-// RedBlack Tree.
+// RedBlack Tree is a binary search tree where each node has an additional
+// attribute: a color, which can be either red or black. By maintaining
+// specific coloring rules during insertions and deletions, the tree ensures it
+// stays approximately balanced.
+//
+// The Five Rules
+// Every Red-Black tree must satisfy these properties:
+//
+//   - Every node is colored either red or black
+//   - The root node is always black
+//   - All leaf nodes (nil children nodes) are black
+//   - Red nodes cannot have red children (no two red nodes can be adjacent)
+//   - Every path from a node to its descendant nil nodes contains the same
+//     number of black nodes (this is called the black-height property)
+//
+// The longest possible path from root to leaf can be at most twice as long as
+// the shortest path, which happens when one path alternates red-black nodes
+// while another has only black nodes.
 type RedBlack[T constraints.Ordered] struct {
 	root *redBlackNode[T]
 }
@@ -35,7 +52,26 @@ func (t *RedBlack[T]) Insert(v T) bool {
 		return true
 	}
 
-	return t.root.Insert(v)
+	newRoot, inserted := t.root.insertInternal(v)
+	if inserted {
+		t.root = newRoot
+
+		/*
+			// TODO(rsned): Uncomment this when its working.
+			// Apply fixup if there's a red-red violation.
+			// Find the newly inserted node to check for violations
+			newNode := findNodeRedBlack(t.root, v)
+
+			if newNode != nil && newNode.isRed && newNode.parent != nil && newNode.parent.isRed {
+				// We have a red-red violation, fix it up
+				// t.root = insertFixup(newNode)
+			}
+		*/
+		// Ensure root is black
+		t.root.isRed = false
+	}
+
+	return inserted
 }
 
 // Delete the requested node from the tree and reports if it was successful.

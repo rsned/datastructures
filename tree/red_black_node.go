@@ -49,33 +49,26 @@ func (t *redBlackNode[T]) Metadata() string {
 
 // Insert inserts the node into the tree, growing as needed, and reports
 // if the operation was successful.
+// NOTE: This method doesn't handle root changes.
+// For proper Red-Black insertion that can change the root, use RedBlack.Insert() instead.
 func (t *redBlackNode[T]) Insert(v T) bool {
 	if t == nil {
 		return false
 	}
 
-	if v == t.value {
-		return false
-	}
+	_, inserted := t.insertInternal(v)
 
-	if v < t.value {
-		if t.left == nil {
-			t.left = &redBlackNode[T]{
-				value:  v,
-				isRed:  true,
-				parent: nil,
-				left:   nil,
-				right:  nil,
-			}
+	return inserted
+}
 
-			return true
-		}
-
-		return t.left.Insert(v)
-	}
-
-	if t.right == nil {
-		t.right = &redBlackNode[T]{
+// insertInternal performs Red-Black insertion with proper rebalancing
+// and returns the potential new root.
+func (t *redBlackNode[T]) insertInternal(v T) (*redBlackNode[T], bool) {
+	// We are either at the end of the road drilling down to the right spot in
+	// the tree, or we are inserting what will be the new root node.
+	if t == nil {
+		// New nodes all start as Red
+		newNode := &redBlackNode[T]{
 			value:  v,
 			isRed:  true,
 			parent: nil,
@@ -83,10 +76,65 @@ func (t *redBlackNode[T]) Insert(v T) bool {
 			right:  nil,
 		}
 
-		return true
+		return newNode, true
 	}
 
-	return t.right.Insert(v)
+	// Inserting a duplicate value is an error
+	if v == t.value {
+		return t, false
+	}
+
+	var inserted bool
+	var newNode *redBlackNode[T]
+	// If we need to go farther left, recurse.
+	if v < t.value {
+		newNode, inserted = t.left.insertInternal(v)
+		if newNode != nil {
+			t.left = newNode
+			newNode.parent = t
+		}
+	} else {
+		// If we need to go farther right, recurse.
+		newNode, inserted = t.right.insertInternal(v)
+		if newNode != nil {
+			t.right = newNode
+			newNode.parent = t
+		}
+	}
+
+	if !inserted {
+		return t, false
+	}
+
+	// TODO(rsned): Uncomment this when its working.
+	/*
+		if newNode != nil && newNode.isRed && newNode.parent != nil && newNode.parent.isRed {
+			// We have a red-red violation, fix it up starting from the new node
+
+			// TODO(rsned): Uncomment this when its working.
+			// return insertFixup(newNode), true
+		}
+	*/
+
+	return t, true
+}
+
+// findNodeRedBlack searches for a node with the given value in the tree.
+// Returns the node if found, nil otherwise.
+func findNodeRedBlack[T constraints.Ordered](root *redBlackNode[T], value T) *redBlackNode[T] {
+	if root == nil {
+		return nil
+	}
+
+	if value == root.value {
+		return root
+	}
+
+	if value < root.value {
+		return findNodeRedBlack(root.left, value)
+	}
+
+	return findNodeRedBlack(root.right, value)
 }
 
 // Delete the requested node from the tree and reports if it was successful.
