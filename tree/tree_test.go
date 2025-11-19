@@ -179,7 +179,7 @@ func BenchmarkTreeSearch(b *testing.B) {
 			vals := testIntVals[:n]
 			// Build and fill the tree before starting the benchmark.
 			tree := example.tree()
-			for i := 0; i < n; i++ {
+			for i := range n {
 				tree.Insert(vals[i])
 			}
 

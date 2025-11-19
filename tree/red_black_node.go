@@ -61,8 +61,8 @@ func (t *redBlackNode[T]) Insert(v T) bool {
 	return inserted
 }
 
-// insertInternal performs Red-Black insertion with proper rebalancing
-// and returns the potential new root.
+// insertInternal performs BST insertion and returns the newly inserted leaf node.
+// The tree root is NOT changed by this function - fixup must be called separately.
 func (t *redBlackNode[T]) insertInternal(v T) (*redBlackNode[T], bool) {
 	// We are either at the end of the road drilling down to the right spot in
 	// the tree, or we are inserting what will be the new root node.
@@ -81,7 +81,7 @@ func (t *redBlackNode[T]) insertInternal(v T) (*redBlackNode[T], bool) {
 
 	// Inserting a duplicate value is an error
 	if v == t.value {
-		return t, false
+		return nil, false
 	}
 
 	var inserted bool
@@ -89,34 +89,23 @@ func (t *redBlackNode[T]) insertInternal(v T) (*redBlackNode[T], bool) {
 	// If we need to go farther left, recurse.
 	if v < t.value {
 		newNode, inserted = t.left.insertInternal(v)
-		if newNode != nil {
+		if inserted && t.left == nil {
+			// Only update if we're at the insertion point
 			t.left = newNode
 			newNode.parent = t
 		}
 	} else {
 		// If we need to go farther right, recurse.
 		newNode, inserted = t.right.insertInternal(v)
-		if newNode != nil {
+		if inserted && t.right == nil {
+			// Only update if we're at the insertion point
 			t.right = newNode
 			newNode.parent = t
 		}
 	}
 
-	if !inserted {
-		return t, false
-	}
-
-	// TODO(rsned): Uncomment this when its working.
-	/*
-		if newNode != nil && newNode.isRed && newNode.parent != nil && newNode.parent.isRed {
-			// We have a red-red violation, fix it up starting from the new node
-
-			// TODO(rsned): Uncomment this when its working.
-			// return insertFixup(newNode), true
-		}
-	*/
-
-	return t, true
+	// Return the newly inserted leaf node
+	return newNode, inserted
 }
 
 // rotateLeftRedBlack performs a left rotation around the given node to
@@ -188,11 +177,11 @@ func rotateLeftRedBlack[T constraints.Ordered](node *redBlackNode[T]) *redBlackN
 //
 // Example: Insert 10 into this tree.
 //
-//	   [30]          [30]
-//	   /             /
-//	(20)   ==>     (20)
-//	               /
-//	              (10)
+//	   [30]         [30]
+//	   /            /
+//	(20)    ==>   (20)
+//	              /
+//	            (10)
 //
 // Parent (20) is red, Uncle is nil (considered black)
 // This is a left-left case: 20 is the left child of 30, and 10 is the
@@ -236,6 +225,112 @@ func rotateRightRedBlack[T constraints.Ordered](node *redBlackNode[T]) *redBlack
 	}
 
 	return newRoot
+}
+
+// insertFixup fixes Red-Black tree violations after insertion and returns
+// the potential new root of the tree.
+//
+// There are three potential fixes that can be applied:
+//
+// - Case 1:  Recoloring
+// - Case 2:  Zig-Zag (Triangle) - Left-Right or Right-Left
+// - Case 3:  Line-Line
+func insertFixup[T constraints.Ordered](node *redBlackNode[T]) *redBlackNode[T] {
+	current := node
+	for current.parent != nil && current.parent.isRed {
+		// Determine the potential uncle node:
+		//
+		//         G                    G
+		//       /   \                /   \
+		//      P     U    - or -    U     P
+		//     / \   / \            / \   / \
+		//    C   S *   *          *   * S   C
+		//
+		// C is the current node, P is the parent node, U is the uncle node,
+		// G is the grandparent node, S is the sibling node, * is a nil/black node.
+		//
+		// The uncle is the sibling of the parent.
+		//
+		// The grandparent is the parent of the parent.
+
+		grandparent := current.parent.parent
+		if grandparent == nil {
+			break
+		}
+
+		var uncle *redBlackNode[T]
+		if current.parent == grandparent.left {
+			uncle = grandparent.right
+		} else {
+			uncle = grandparent.left
+		}
+
+		// Case 1: Recoloring. Uncle is red - recolor to black.
+		if uncle != nil && uncle.isRed {
+			current.parent.isRed = false
+			uncle.isRed = false
+			grandparent.isRed = true
+			current = grandparent
+
+			continue
+		}
+
+		// Cases 2 & 3: Uncle is black (i.e., a leaf node)
+
+		// Determine if we have a zig-zag (triangle) configuration
+		//
+		//  Left-Right   Right-Left
+		//     [G]         [G]
+		//     /             \
+		//   (P)             (P)
+		//     \             /
+		//     (C)         (C)
+		//
+		// If this is Left-??? (parent is left child of grandparent)
+		if current.parent == grandparent.left {
+			parent := current.parent
+			if current == parent.right {
+				// Left-Right - rotate parent left to transform to Left-Left
+				rotateLeftRedBlack(parent)
+				// After rotation, current is now the parent, and parent is its left child
+				current, parent = parent, current
+			}
+			// After Left-Right transform or if already Left-Left:
+			// Recolor and rotate grandparent right.
+			parent.isRed = false
+			grandparent.isRed = true
+			rotateRightRedBlack(grandparent)
+
+			break
+		}
+
+		// If this is Right-something (parent is right child of grandparent)
+		parent := current.parent
+		if current == parent.left {
+			// Right-Left - rotate parent right to transform to Right-Right
+			rotateRightRedBlack(parent)
+			// After rotation, current is now the parent, and parent is its right child
+			current, parent = parent, current
+		}
+		// After Right-Left transform or if already Right-Right:
+		// Recolor and rotate grandparent left.
+		parent.isRed = false
+		grandparent.isRed = true
+		rotateLeftRedBlack(grandparent)
+
+		break
+	}
+
+	// Find and return the root of the entire tree
+	root := current
+	for root.parent != nil {
+		root = root.parent
+	}
+
+	// Ensure root is always black
+	root.isRed = false
+
+	return root
 }
 
 // findNodeRedBlack searches for a node with the given value in the tree.

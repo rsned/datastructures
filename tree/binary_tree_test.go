@@ -96,9 +96,12 @@ func generateLevelOrderTraverseValues(t *testing.T, vals []int, midPoint int) []
 	return levelOrderVals
 }
 
-// generateStructuredBinaryTree is a helper that creates a BST with a specific structure
-// by generating random values, sorting them, optionally applying level-order transformation,
-// and optionally reversing before insertion.
+// generateStructuredBinaryTree is a helper that creates a BST with a specific
+// structure by generating random values, sorting them, optionally applying
+// level-order transformation, and optionally reversing before insertion.
+// If the midpointFunc is nil, the midpoint will be the middle of the slice,
+// otherwise it will be the result of calling the function with the length
+// of the slice to choose which node will be the root node.
 func generateStructuredBinaryTree(t *testing.T, seed int64, numNodes int, useLevelOrder bool, midpointFunc func(int) int, reverse bool) Tree[int] {
 	t.Helper()
 
@@ -163,6 +166,59 @@ func generateDegenerateBinaryTree(t *testing.T, seed int64, numNodes int, left b
 	t.Helper()
 
 	return generateStructuredBinaryTree(t, seed, numNodes, false, nil, left)
+}
+
+func testGenerators(t *testing.T) {
+	t.Helper()
+
+	tests := []struct {
+		name     string
+		seed     int64
+		numNodes int
+	}{
+		{
+			name:     "nub tree",
+			seed:     2468,
+			numNodes: 1,
+		},
+		{
+			name:     "tiny tree",
+			seed:     42,
+			numNodes: 5,
+		},
+		{
+			name:     "small tree",
+			seed:     13579,
+			numNodes: 10,
+		},
+		{
+			name:     "medium tree",
+			seed:     13579,
+			numNodes: 15,
+		},
+		{
+			name:     "large tree",
+			seed:     8675309,
+			numNodes: 31,
+		},
+	}
+
+	for _, tt := range tests {
+		skewLeft := true
+		randomTree := generateRandomBinaryTree(t, tt.seed, tt.numNodes)
+		balancedTree := generateBalancedBinaryTree(t, tt.seed, tt.numNodes)
+		skewedTreeLeft := generatedSkewedBinaryTree(t, tt.seed, tt.numNodes, skewLeft)
+		skewedTreeRight := generatedSkewedBinaryTree(t, tt.seed, tt.numNodes, !skewLeft)
+		degenerateTreeLeft := generateDegenerateBinaryTree(t, tt.seed, tt.numNodes, skewLeft)
+		degenerateTreeRight := generateDegenerateBinaryTree(t, tt.seed, tt.numNodes, !skewLeft)
+
+		t.Logf("Random Tree: %s\n%s", tt.name, PrintTreeASCII("", randomTree))
+		t.Logf("Balanced Tree: %s\n%s", tt.name, PrintTreeASCII("", balancedTree))
+		t.Logf("Skewed Tree (Left): %s\n%s", tt.name, PrintTreeASCII("", skewedTreeLeft))
+		t.Logf("Skewed Tree (Right): %s\n%s", tt.name, PrintTreeASCII("", skewedTreeRight))
+		t.Logf("Degenerate Tree (Left): %s\n%s", tt.name, PrintTreeASCII("", degenerateTreeLeft))
+		t.Logf("Degenerate Tree (Right): %s\n%s", tt.name, PrintTreeASCII("", degenerateTreeRight))
+	}
 }
 
 // TestGenerateRandomBSTVals verifies that generateRandomBSTVals produces
@@ -243,8 +299,6 @@ func TestGenerateRandomBSTVals(t *testing.T) {
 	}
 }
 
-// TestGenerateLevelOrderTraverseValues tests the generateLevelOrderTraverseValues function
-// with various input sizes and midpoint positions.
 func TestGenerateLevelOrderTraverseValues(t *testing.T) {
 	t.Parallel()
 

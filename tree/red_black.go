@@ -52,21 +52,14 @@ func (t *RedBlack[T]) Insert(v T) bool {
 		return true
 	}
 
-	newRoot, inserted := t.root.insertInternal(v)
+	newNode, inserted := t.root.insertInternal(v)
 	if inserted {
-		t.root = newRoot
+		// Apply fixup if there's a red-red violation
+		if newNode != nil && newNode.isRed && newNode.parent != nil && newNode.parent.isRed {
+			// We have a red-red violation, fix it up
+			t.root = insertFixup(newNode)
+		}
 
-		/*
-			// TODO(rsned): Uncomment this when its working.
-			// Apply fixup if there's a red-red violation.
-			// Find the newly inserted node to check for violations
-			newNode := findNodeRedBlack(t.root, v)
-
-			if newNode != nil && newNode.isRed && newNode.parent != nil && newNode.parent.isRed {
-				// We have a red-red violation, fix it up
-				// t.root = insertFixup(newNode)
-			}
-		*/
 		// Ensure root is black
 		t.root.isRed = false
 	}
